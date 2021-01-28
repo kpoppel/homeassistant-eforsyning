@@ -10,7 +10,7 @@ from datetime import timedelta
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-from pyeforsyning.eforsyning import Eforsyning
+from custom_components.eforsyning.pyeforsyning.eforsyning import Eforsyning
 
 from .const import DOMAIN
 
@@ -34,10 +34,16 @@ async def async_setup(hass: HomeAssistant, config: dict):
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     """Set up Eforsyning from a config entry."""
-    refresh_token = entry.data['refresh_token']
-    metering_point = entry.data['metering_point']
+    username = entry.data['username']
+    password = entry.data['password']
+    supplierid = entry.data['supplierid']
+    ## Assume people onyl have a single metering device.
+    ## Feel free to expand the code to find all metering devices
+    ## and iterate over them.
+    asset_id = 1
+    installation_id = 1
     
-    hass.data[DOMAIN][entry.entry_id] = HassEforsyning(refresh_token, metering_point)
+    hass.data[DOMAIN][entry.entry_id] = HassEforsyning(username, password, supplierid)
 
     for component in PLATFORMS:
         hass.async_create_task(
@@ -63,9 +69,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     return unload_ok
 
 class HassEforsyning:
-    def __init__(self, refresh_token, metering_point):
-        self._client = Eforsyning(refresh_token)
-        self._metering_point = metering_point
+    def __init__(self, username, password, supplierid):
+        self._client = Eforsyning(username, password, supplierid)
 
         self._data = None
 
@@ -93,6 +98,8 @@ class HassEforsyning:
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     def update(self):
         _LOGGER.debug("Fetching data from Eforsyning")
+
+        pass
 
         try: 
             data = self._client.get_latest(self._metering_point)

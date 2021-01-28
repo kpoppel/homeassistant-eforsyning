@@ -12,6 +12,8 @@ from .const import DOMAIN
 
 async def async_setup_entry(hass, config, async_add_entities):
     """Set up the sensor platform."""
+    pass
+
     eforsyning = hass.data[DOMAIN][config.entry_id]
 
     sensors = []
