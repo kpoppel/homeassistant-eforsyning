@@ -9,6 +9,9 @@ import logging
 from .models import RawResponse
 from .models import TimeSeries
 
+# Test
+import random
+
 _LOGGER = logging.getLogger(__name__)
 
 class Eforsyning:
@@ -34,15 +37,16 @@ class Eforsyning:
 
 
     def get_time_series(self,
-                        meetering_point,
                         from_date=None,  # Will be set to yesterday
-                        to_date=None,  # Will be set to today
-                        aggregation='Hour'):
+                        to_date=None,    # Will be set to today
+                        year = "0",
+                        month = False,
+                        day = False,
+                        include_expected_reading = True
+                       ):
         '''
-        Call time series API on eforsyning.dk. Defaults to yester days data.
+        Call time series API on eforsyning.dk. Defaults to yesterdays data.
         '''
-        pass
-
         if from_date is None:
             from_date = datetime.now()-timedelta(days=1)
         if to_date is None:
@@ -51,25 +55,62 @@ class Eforsyning:
         
         access_token = self._get_access_token()
 
-        date_format = '%Y-%m-%d'
+        date_format = '%d-%m-%Y'
         parsed_from_date = from_date.strftime(date_format)
         parsed_to_date = to_date.strftime(date_format)
-        body = "{\"meteringPoints\": {\"meteringPoint\": [\"" + meetering_point + "\"]}}"
 
-        headers = self._create_headers(access_token)
+#        headers = self._create_headers(access_token)
 
-        response = requests.post(self._base_url + f'/api/MeterData/GetTimeSeries/ \
-                                    {parsed_from_date}/{parsed_to_date}/{aggregation}',
-                                 data=body,
-                                 headers=headers,
-                                 timeout=5
-        )
+        post_meter_data_url = "api/getforbrug?id="+crypt_id+"&unr="+username+"&anr="+asset_id+"&inr="+installation_id # POST
 
-        _LOGGER.debug(f"Response from API. Status: {response.status_code}, Body: {response.text}")
+        include_data_in_between = "false"
+        if month or day:
+            include_data_in_between = "true"
+
+        data_filter = "afMaanedsvis"
+        data_average = "false"
+        if day:
+            data_filter = "afDagsvis"
+            data_average = "true"
+
+        data_exp_read = "false"
+        if include_expected_reading:
+            data_exp_read = "true"
+
+        data = {
+                "Ejendomnr":username,
+                "AktivNr":asset_id,
+                "I_Nr":installation_id,
+                "AarsMaerke":year,
+                "ForbrugsAfgraensning_FraDato":from_date,
+                "ForbrugsAfgraensning_TilDato":to_date,
+                "ForbrugsAfgraensning_FraAflaesning":"0",
+                "ForbrugsAfgraensning_TilAflaesning":"2",
+                "ForbrugsAfgraensning_MedtagMellemliggendeMellemaflas":include_data_in_between, ## true || false
+
+                "Optioner":"foBestemtBeboer, foSkabDetaljer, foMedtagWebAflaes",
+                "AHoejDetail":"false", ## true || false
+
+                "Aflaesningsfilter":data_filter, ## afMaanedsvis || afDagsvis || afUfiltreret
+                "AflaesningsFilterDag":"ULTIMO",
+                "AflaesningsUdjaevning":data_average, ## true || false (Create interpolated data it seems)
+
+                "SletFiltreredeAflaesninger":"true", ## true || false (Get rid of filtered data?)
+                "MedForventetForbrug":data_exp_read, ## true || false (Include or exclude expected reading values)
+                "OmregnForbrugTilAktuelleEnhed":"true" # true || false
+            }
+
+        result = requests.post(self._api_server + post_meter_data_url,
+                                data = json.dumps(data),
+                                timeout = 5,
+                                headers=headers
+                              )
+
+        _LOGGER.debug(f"Response from API. Status: {result.status_code}, Body: {result.text}")
 
         raw_response = RawResponse()
-        raw_response.status = response.status_code
-        raw_response.body = response.text
+        raw_response.status = result.status_code
+        raw_response.body = result.text
 
         return raw_response
 
@@ -119,7 +160,8 @@ class Eforsyning:
         '''
         Get data for yesterday and parse it.
         '''
-        pass
+        return
+
         raw_data = self.get_time_series(metering_point)
 
         if raw_data.status == 200:
@@ -133,13 +175,13 @@ class Eforsyning:
 
         return result
 
-    def get_latest(self, metering_point):
+    def get_latest(self):
         '''
-        Get latest data. Will look for one week.
+        Get latest data. Will look for one day except eforsyning returns for a full year.
         '''
-        pass
-        raw_data = self.get_time_series(metering_point,
-                                        from_date=datetime.now()-timedelta(days=8),
+        raw_data = self.get_time_series(year="2020",
+                                        day=True,
+                                        from_date=datetime.now()-timedelta(days=1),
                                         to_date=datetime.now())
 
         if raw_data.status == 200:
@@ -162,8 +204,27 @@ class Eforsyning:
         '''
         Parse result from API call.
         '''
-        pass
         parsed_result = {}
+
+        metering_data = {}
+        metering_data['temp_forward'] = random.randint(0, 100)
+        metering_data['temp_return'] = random.randint(0, 100)
+        metering_data['temp_exp_return'] = random.randint(0, 100)
+        metering_data['temp_meas_return'] = random.randint(0, 100)
+        metering_data['energy_start'] = random.randint(0, 100)
+        metering_data['energy_end'] = random.randint(0, 100)
+        metering_data['energy_consumption'] = random.randint(0, 100)
+        metering_data['energy_exp_consumption'] = random.randint(0, 100)
+        metering_data['energy_exp_end'] = random.randint(0, 100)
+        metering_data['water_start'] = random.randint(0, 100)
+        metering_data['water_end'] = random.randint(0, 100)
+        metering_data['water_consumption'] = random.randint(0, 100)
+        metering_data['water_exp_consumption'] = random.randint(0, 100)
+        metering_data['water_exp_end'] = random.randint(0, 100)
+
+        time_series = TimeSeries(200, "20200128", metering_data)
+        parsed_result['20200128'] = time_series
+        return parsed_result
 
         if 'result' in result and len(result['result']) > 0:
             market_document = result['result'][0]['MyEnergyData_MarketDocument']

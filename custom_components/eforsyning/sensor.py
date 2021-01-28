@@ -17,20 +17,20 @@ async def async_setup_entry(hass, config, async_add_entities):
 
     ## Sensors for
     # Year, Month, Day? We'll fetch data once per day.
-    #   Water - forward temperature
-    #   Water - return temperature
-    #   Water - Expected return temperature
-    #   Water - Measured return temperature
+    #   Temp  - forward temperature
+    #   Temp  - return temperature
+    #   Temp  - Expected return temperature
+    #   Temp  - Measured return temperature
     #   ENG1  - Start MWh
     #   ENG1  - End MWh
     #   ENG1  - Consumption MWh
     #   ENG1  - Expected consumption MWh
     #   ENG1  - Expected End MWh
-    #   M3    - Start M3
-    #   M3    - End M3
-    #   M3    - Consumption M3
-    #   M3    - Expected consumption M3
-    #   M3    - Expected End M3
+    #   Water - Start M3
+    #   Water - End M3
+    #   Water - Consumption M3
+    #   Water - Expected consumption M3
+    #   Water - Expected End M3
     # Extra data (don't know what this is):
     #   ENG2  - Start MWh
     #   ENG2  - End MWh
@@ -68,11 +68,25 @@ class EforsyningEnergy(Entity):
         self._name = name
         self._sensor_type = sensor_type
         self._unique_id = f"eforsyning-{sensor_type}-{sensor_point}"
+        if self._sensor_type == "energy":
+            self._unit = "MWh"
+            self._icon = "mdi:flash-circle"
+        elif self._sensor_type == "water":
+            self._unit = "m³"
+            self._icon = "mdi:water"
+        else:
+            self._unit = TEMP_CELSIUS
+            self._icon = "mdi:thermometer"
+
 
     @property
     def name(self):
         """Return the name of the sensor."""
         return self._name
+
+    @property
+    def icon(self):
+        return self._icon
 
     @property
     def unique_id(self):
@@ -96,19 +110,12 @@ class EforsyningEnergy(Entity):
     @property
     def unit_of_measurement(self):
         """Return the unit of measurement."""
-        if self._sensor_type == "energy":
-            return "MWh"
-        elif self._sensor_type == "water":
-            return "m³"
-        else:
-            return TEMP_CELSIUS
+        self._unit
 
     def update(self):
         """Fetch new state data for the sensor.
         This is the only method that should fetch new data for Home Assistant.
         """
-        self._state = 100
-        return
         self._data.update()        
 
         self._data_date = self._data.get_data_date()
