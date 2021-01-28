@@ -102,7 +102,7 @@ class HassEforsyning:
         _LOGGER.debug("Fetching data from Eforsyning")
 
         try: 
-            data = self._client.get_latest(None)
+            data = self._client.get_latest()
             if data.status == 200:
                 self._data = data
             else:
