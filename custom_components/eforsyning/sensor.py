@@ -2,8 +2,8 @@
 import logging
 from homeassistant.const import ENERGY_KILO_WATT_HOUR
 from homeassistant.helpers.entity import Entity
-from pyeforsyning.eforsyning import Eforsyning
-from pyeforsyning.models import TimeSeries
+from custom_components.eforsyning.pyeforsyning.eforsyning import Eforsyning
+from custom_components.eforsyning.pyeforsyning.models import TimeSeries
 
 _LOGGER = logging.getLogger(__name__)
 from .const import DOMAIN

@@ -20,7 +20,7 @@ class Eforsyning:
         self._password = password
         self._supplierid = supplierid
         self._base_url = 'https://eforsyning.dk/'
-        self._api_server = self._get_api_server()
+        self._api_server = ""
 
     def get_customer_data(self):
         result = requests.get(api_server + "api/getebrugerinfo?id=" + crypt_id)
@@ -81,6 +81,9 @@ class Eforsyning:
         return result_dict['AppServerUri']
 
     def _get_access_token(self):
+        if self._api_server == "":
+            self._api_server = self._get_api_server()
+
         # With the API server URL we can authenticate and get a token:
         security_token_url = "system/getsecuritytoken/project/app/consumer/"
         result = requests.get(self._api_server + security_token_url + self._username)
