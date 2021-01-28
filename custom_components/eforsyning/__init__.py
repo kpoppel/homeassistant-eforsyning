@@ -23,7 +23,7 @@ CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 
 PLATFORMS = ["sensor"]
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=60)
+MIN_TIME_BETWEEN_UPDATES = timedelta(hours=24)
 
 
 async def async_setup(hass: HomeAssistant, config: dict):
@@ -37,7 +37,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     username = entry.data['username']
     password = entry.data['password']
     supplierid = entry.data['supplierid']
-    ## Assume people onyl have a single metering device.
+    ## Assume people only have a single metering device.
     ## Feel free to expand the code to find all metering devices
     ## and iterate over them.
     asset_id = 1

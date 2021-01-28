@@ -37,7 +37,7 @@ async def validate_input(hass: core.HomeAssistant, data):
     # InvalidAuth
 
     # Return info that you want to store in the config entry.
-    metering_point = data["supplierid"]
+    supplierid = data["supplierid"]
     return {"title": f"Eforsyning {supplierid}"}
 
 

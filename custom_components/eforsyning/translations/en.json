@@ -3,10 +3,11 @@
         "step": {
             "user": {
                 "data": {
-                    "refresh_token": "Refresh Token",
-                    "metering_point": "Metering Point"
+                    "username": "User name",
+                    "password": "Password",
+                    "supplierid": "Supplier ID"
                 },
-                "title": "Enter refresh token and metering point"
+                "title": "Enter username, password and supplier id"
             }
         },
         "title": "Eforsyning"
