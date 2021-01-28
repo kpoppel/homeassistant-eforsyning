@@ -62,19 +62,3 @@ class TimeSeries:
                 ['water-exp-end']
         """
         return self._metering_data[data_point]
-
-
-#    def get_metering_data(self, hour):
-#        '''
-#        Get metering data for a single hour.
-#        hour=1: data between 00.00 and 01.00.
-#        hour=4: data between 03.00 and 04.00.
-#        '''
-#        return self._metering_data[hour-1]
-
-#    def get_total_metering_data(self):
-#        total = 0
-#        for v in self._metering_data:
-#            total += v
-#
-#        return total

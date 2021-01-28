@@ -25,7 +25,7 @@ class Eforsyning:
         self._base_url = 'https://eforsyning.dk/'
         self._api_server = ""
 
-    def get_customer_data(self):
+    def _get_customer_data(self):
         result = requests.get(api_server + "api/getebrugerinfo?id=" + crypt_id)
         euser_id = str(result_dict['id'])
 
@@ -36,7 +36,7 @@ class Eforsyning:
         return raw_response
 
 
-    def get_time_series(self,
+    def _get_time_series(self,
                         from_date=None,  # Will be set to yesterday
                         to_date=None,    # Will be set to today
                         year = "0",
@@ -82,8 +82,8 @@ class Eforsyning:
                 "AktivNr":asset_id,
                 "I_Nr":installation_id,
                 "AarsMaerke":year,
-                "ForbrugsAfgraensning_FraDato":from_date,
-                "ForbrugsAfgraensning_TilDato":to_date,
+                "ForbrugsAfgraensning_FraDato":parsed_from_date,
+                "ForbrugsAfgraensning_TilDato":parsed_to_date,
                 "ForbrugsAfgraensning_FraAflaesning":"0",
                 "ForbrugsAfgraensning_TilAflaesning":"2",
                 "ForbrugsAfgraensning_MedtagMellemliggendeMellemaflas":include_data_in_between, ## true || false
@@ -156,33 +156,35 @@ class Eforsyning:
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'}
 
-    def get_yesterday_parsed(self, metering_point):
-        '''
-        Get data for yesterday and parse it.
-        '''
-        return
-
-        raw_data = self.get_time_series(metering_point)
-
-        if raw_data.status == 200:
-            json_response = json.loads(raw_data.body)
-
-            result_dict = self._parse_result(json_response)
-            (key, value) = result_dict.popitem()
-            result = value
-        else:
-            result = TimeSeries(raw_data.status, None, None, raw_data.body)
-
-        return result
+#    def get_yesterday_parsed(self, metering_point):
+#        '''
+#        Get data for yesterday and parse it.
+#        '''
+#        return
+#
+#        raw_data = self.get_time_series(metering_point)
+#
+#        if raw_data.status == 200:
+#            json_response = json.loads(raw_data.body)
+#
+#            result_dict = self._parse_result(json_response)
+#            (key, value) = result_dict.popitem()
+#            result = value
+#        else:
+#            result = TimeSeries(raw_data.status, None, None, raw_data.body)
+#
+#        return result
 
     def get_latest(self):
         '''
         Get latest data. Will look for one day except eforsyning returns for a full year.
         '''
-        raw_data = self.get_time_series(year="2020",
-                                        day=True,
-                                        from_date=datetime.now()-timedelta(days=1),
-                                        to_date=datetime.now())
+        __LOGGER.debug(f"Getting latest data")
+
+        raw_data = self._get_time_series(year="2020",
+                                         day=True,
+                                         from_date=datetime.now()-timedelta(days=1),
+                                         to_date=datetime.now())
 
         if raw_data.status == 200:
             json_response = json.loads(raw_data.body)
@@ -198,12 +200,14 @@ class Eforsyning:
         else:
             result = TimeSeries(raw_data.status, None, None, raw_data.body)
 
+        __LOGGER.debug(f"Done getting latest data")
         return result
 
     def _parse_result(self, result):
         '''
         Parse result from API call.
         '''
+        __LOGGER.debug(f"Parsing results")
         parsed_result = {}
 
         metering_data = {}
@@ -224,6 +228,7 @@ class Eforsyning:
 
         time_series = TimeSeries(200, "20200128", metering_data)
         parsed_result['20200128'] = time_series
+        __LOGGER.debug(f"Done parsing results")
         return parsed_result
 
         if 'result' in result and len(result['result']) > 0:
