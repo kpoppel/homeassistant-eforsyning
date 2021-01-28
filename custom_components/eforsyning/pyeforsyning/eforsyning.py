@@ -143,9 +143,9 @@ class Eforsyning:
         result_json = token_response.json()
         result_status = token_json['Result']
         if result_status['Result'] == 1:
-            __LOGGER.debug("Login success\n")
-        else:
-            __LOGGER.debug("Login failed. Bye.\n")
+            _LOGGER.debug("Login success\n")
+        else
+            _LOGGER.debug("Login failed. Bye.\n")
 
         _LOGGER.debug(f"Got short lived token: {crypt_id}")
         return crypt_id
@@ -179,7 +179,7 @@ class Eforsyning:
         '''
         Get latest data. Will look for one day except eforsyning returns for a full year.
         '''
-        __LOGGER.debug(f"Getting latest data")
+        _LOGGER.debug(f"Getting latest data")
 
         raw_data = self._get_time_series(year="2020",
                                          day=True,
@@ -200,14 +200,14 @@ class Eforsyning:
         else:
             result = TimeSeries(raw_data.status, None, None, raw_data.body)
 
-        __LOGGER.debug(f"Done getting latest data")
+        _LOGGER.debug(f"Done getting latest data")
         return result
 
     def _parse_result(self, result):
         '''
         Parse result from API call.
         '''
-        __LOGGER.debug(f"Parsing results")
+        _LOGGER.debug(f"Parsing results")
         parsed_result = {}
 
         metering_data = {}
@@ -228,7 +228,7 @@ class Eforsyning:
 
         time_series = TimeSeries(200, "20200128", metering_data)
         parsed_result['20200128'] = time_series
-        __LOGGER.debug(f"Done parsing results")
+        _LOGGER.debug(f"Done parsing results")
         return parsed_result
 
         if 'result' in result and len(result['result']) > 0:
