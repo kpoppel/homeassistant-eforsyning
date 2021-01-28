@@ -92,9 +92,6 @@ class HassEforsyning:
         else:
             return None
 
-    def get_metering_point(self):
-        return self._metering_point
-
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     def update(self):
         _LOGGER.debug("Fetching data from Eforsyning")
@@ -102,7 +99,7 @@ class HassEforsyning:
         pass
 
         try: 
-            data = self._client.get_latest(self._metering_point)
+            data = self._client.get_latest(None)
             if data.status == 200:
                 self._data = data
             else:
