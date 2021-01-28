@@ -67,7 +67,7 @@ class EforsyningEnergy(Entity):
         self._data = client
         self._name = name
         self._sensor_type = sensor_type
-        self-_unique_id = f"eforsyning-{sensor_unit}-{sensor_point}"
+        self._unique_id = f"eforsyning-{sensor_unit}-{sensor_point}"
 
     @property
     def name(self):
