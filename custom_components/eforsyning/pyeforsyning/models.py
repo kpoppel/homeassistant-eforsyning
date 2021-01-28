@@ -44,47 +44,25 @@ class TimeSeries:
     def data_date(self):
         return self._data_date
     
-    def get_temp_forward(self):
-        return self._metering_data['temp_forward']
+    def get_data_point(data_point):
+        """ Legal data points to ask for are:
+                ['temp-forward']
+                ['temp-return']
+                ['temp-exp-return']
+                ['temp-meas-return']
+                ['energy-start']
+                ['energy-end']
+                ['energy-used']
+                ['energy-exp-used']
+                ['energy-exp-end']
+                ['water-start']
+                ['water-end']
+                ['water-used']
+                ['water-exp-used']
+                ['water-exp-end']
+        """
+        return self._metering_data[data_point]
 
-    def get_temp_return(self):
-        return self._metering_data['temp_return']
-
-    def get_temp_exp_return(self):
-        return self._metering_data['temp_exp_return']
-
-    def get_temp_meas_return(self):
-        return self._metering_data['temp_meas_return']
-
-    def get_energy_start(self):
-        return self._metering_data['energy_start']
-
-    def get_energy_end(self):
-        return self._metering_data['energy_end']
-
-    def get_energy_consumption(self):
-        return self._metering_data['energy_consumption']
-
-    def get_energy_exp_consumption(self):
-        return self._metering_data['energy_exp_consumption']
-
-    def get_energy_exp_end(self):
-        return self._metering_data['energy_exp_end']
-
-    def get_water_start(self):
-        return self._metering_data['water_start']
-
-    def get_water_end(self):
-        return self._metering_data['water_end']
-
-    def get_water_consumption(self):
-        return self._metering_data['water_consumption']
-
-    def get_water_exp_consumption(self):
-        return self._metering_data['water_exp_consumption']
-
-    def get_water_exp_end(self):
-        return self._metering_data['water_exp_end']
 
 #    def get_metering_data(self, hour):
 #        '''

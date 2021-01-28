@@ -74,15 +74,20 @@ class HassEforsyning:
 
         self._data = None
 
-    def get_total_day(self):
-        if self._data != None:
-            return round(self._data.get_total_metering_data(), 3)
-        else:
-            return None
+#    def get_total_day(self):
+#        if self._data != None:
+#            return round(self._data.get_total_metering_data(), 3)
+#        else:
+#            return None
 
-    def get_usage_hour(self, hour):
+#    def get_usage_hour(self, hour):
+#        if self._data != None:
+#            return round(self._data.get_metering_data(hour), 3)
+#        else:
+#            return None
+    def get_data(self, data_point):
         if self._data != None:
-            return round(self._data.get_metering_data(hour), 3)
+            return self._data.get_data_point(data_point)
         else:
             return None
 
@@ -95,8 +100,6 @@ class HassEforsyning:
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     def update(self):
         _LOGGER.debug("Fetching data from Eforsyning")
-
-        pass
 
         try: 
             data = self._client.get_latest(None)

@@ -40,8 +40,8 @@ async def async_setup_entry(hass, config, async_add_entities):
     #   TV2  - Consumption MWh
     # The daily datalog should only be one sensor reading.
     # So
-    temp_series = {"forward", "return", "expected-return", "actual-return"}
-    energy_series = {"start", "end", "used", "expected-used", "expected-end"}
+    temp_series = {"forward", "return", "exp-return", "meas-return"}
+    energy_series = {"start", "end", "used", "exp-used", "exp-end"}
     sensors = []
 
     for s in temp_series:
@@ -66,12 +66,12 @@ class EforsyningEnergy(Entity):
         self._data_date = None
         self._data = client
         self._name = name
-        self._sensor_type = sensor_type
-        self._unique_id = f"eforsyning-{sensor_type}-{sensor_point}"
-        if self._sensor_type == "energy":
+        self._sensor_value = f"{sensor_type}-{sensor_point}"
+        self._unique_id = f"eforsyning-{self._sensor_value}"
+        if sensor_type == "energy":
             self._unit = "MWh"
             self._icon = "mdi:flash-circle"
-        elif self._sensor_type == "water":
+        elif sensor_type == "water":
             self._unit = "m³"
             self._icon = "mdi:water"
         else:
@@ -119,9 +119,5 @@ class EforsyningEnergy(Entity):
         self._data.update()        
 
         self._data_date = self._data.get_data_date()
-
-        if self._sensor_type == 'total':
-            self._state = self._data.get_total_day()
-        else:
-            self._state = self._data.get_usage_hour(self._hour)
+        self._state = self._data.get_data(self._sensor_value)
 
