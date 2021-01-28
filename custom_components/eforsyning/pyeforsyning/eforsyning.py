@@ -144,7 +144,7 @@ class Eforsyning:
         result_status = token_json['Result']
         if result_status['Result'] == 1:
             _LOGGER.debug("Login success\n")
-        else
+        else:
             _LOGGER.debug("Login failed. Bye.\n")
 
         _LOGGER.debug(f"Got short lived token: {crypt_id}")
