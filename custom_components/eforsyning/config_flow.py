@@ -9,7 +9,7 @@ from .const import DOMAIN  # pylint:disable=unused-import
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_SCHEMA = vol.Schema({"refresh_token": str, "metering_point": str})
+DATA_SCHEMA = vol.Schema({"username": str, "password": str, "supplierid": str})
 
 
 async def validate_input(hass: core.HomeAssistant, data):
@@ -37,8 +37,8 @@ async def validate_input(hass: core.HomeAssistant, data):
     # InvalidAuth
 
     # Return info that you want to store in the config entry.
-    metering_point = data["metering_point"]
-    return {"title": f"Eforsyning {metering_point}"}
+    metering_point = data["supplierid"]
+    return {"title": f"Eforsyning {supplierid}"}
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -54,8 +54,8 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             try:
                 #info = await validate_input(self.hass, user_input)
-                metering_point = user_input["metering_point"]
-                info = f"Eforsyning {metering_point}"
+                supplierid = user_input["supplierid"]
+                info = f"Eforsyning {supplierid}"
                 return self.async_create_entry(title=info, data=user_input)
             except CannotConnect:
                 errors["base"] = "cannot_connect"
