@@ -60,14 +60,14 @@ async def async_setup_entry(hass, config, async_add_entities):
 class EforsyningEnergy(Entity):
     """Representation of a Sensor."""
 
-    def __init__(self, name, sensor_point, sensor_unit, client):
+    def __init__(self, name, sensor_point, sensor_type, client):
         """Initialize the sensor."""
         self._state = None
         self._data_date = None
         self._data = client
         self._name = name
         self._sensor_type = sensor_type
-        self._unique_id = f"eforsyning-{sensor_unit}-{sensor_point}"
+        self._unique_id = f"eforsyning-{sensor_type}-{sensor_point}"
 
     @property
     def name(self):
