@@ -116,10 +116,11 @@ class EforsyningEnergy(Entity):
         """Fetch new state data for the sensor.
         This is the only method that should fetch new data for Home Assistant.
         """
-        __LOGGER.error(f"Calling eforsyning update()")
+        _LOGGER.debug(f"Updating data")
 
         self._data.update()        
 
         self._data_date = self._data.get_data_date()
         self._state = self._data.get_data(self._sensor_value)
+        _LOGGER.debug(f"Done updating data")
 
