@@ -138,9 +138,10 @@ class Eforsyning:
         settingsURL="/umbraco/dff/dffapi/GetVaerkSettings?forsyningid="
         result = requests.get(self._base_url + settingsURL + self._supplierid)
         result_json = result.json()
+        _LOGGER.debug(f"result JSON {result_json}")
         api_server = result_json['AppServerUri']
 
-        _LOGGER.debug(f"Done getting api server {api_Server}")
+        _LOGGER.debug(f"Done getting api server {api_server}")
 
         return api_server
 
