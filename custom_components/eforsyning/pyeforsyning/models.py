@@ -44,7 +44,7 @@ class TimeSeries:
     def data_date(self):
         return self._data_date
     
-    def get_data_point(data_point):
+    def get_data_point(self, data_point):
         """ Legal data points to ask for are:
                 ['temp-forward']
                 ['temp-return']
