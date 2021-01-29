@@ -61,7 +61,7 @@ class Eforsyning:
         parsed_from_date = from_date.strftime(date_format)
         parsed_to_date = to_date.strftime(date_format)
 
-#        headers = self._create_headers(access_token)
+        headers = self._create_headers(access_token)
 
         post_meter_data_url = "api/getforbrug?id="+access_token+"&unr="+self._username+"&anr="+self._asset_id+"&inr="+self._installation_id # POST
 
@@ -101,6 +101,8 @@ class Eforsyning:
                 "MedForventetForbrug":data_exp_read, ## true || false (Include or exclude expected reading values)
                 "OmregnForbrugTilAktuelleEnhed":"true" # true || false
             }
+
+        _LOGGER.debug(f"Data for POST: {data}")
 
         result = requests.post(self._api_server + post_meter_data_url,
                                 data = json.dumps(data),
