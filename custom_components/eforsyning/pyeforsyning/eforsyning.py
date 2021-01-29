@@ -133,13 +133,20 @@ class Eforsyning:
         return raw_response
 
     def _get_api_server(self):
+        _LOGGER.debug(f"getting api server")
         ## Get the URL to the REST API service
         settingsURL="/umbraco/dff/dffapi/GetVaerkSettings?forsyningid="
         result = requests.get(self._base_url + settingsURL + self._supplierid)
-        result_dict = json.loads(result.text)
-        return result_dict['AppServerUri']
+        result_json = result.json()
+        api_server = result_json['AppServerUri']
+
+        _LOGGER.debug(f"Done getting api server {api_Server}")
+
+        return api_server
 
     def _get_access_token(self):
+        _LOGGER.debug(f"getting access token")
+
         if self._api_server == "":
             self._api_server = self._get_api_server()
 
@@ -147,7 +154,7 @@ class Eforsyning:
         security_token_url = "system/getsecuritytoken/project/app/consumer/"
         result = requests.get(self._api_server + security_token_url + self._username)
         result.raise_for_status()
-        result_json = token_response.json()
+        result_json = result.json()
         token = result_json['Token']
         hashed_password = hashlib.md5(password.encode()).hexdigest();
         crypt_string = hashed_password + token
@@ -158,14 +165,14 @@ class Eforsyning:
 
         result = requests.get(self._api_server + auth_url + access_token)
         result.raise_for_status()
-        result_json = token_response.json()
+        result_json = result.json()
         result_status = token_json['Result']
         if result_status['Result'] == 1:
             _LOGGER.debug("Login success\n")
         else:
             _LOGGER.debug("Login failed. Bye.\n")
 
-        _LOGGER.debug(f"Got short lived token: {access_token}")
+        _LOGGER.debug(f"Got access token: {access_token}")
         return access_token
 
     def _create_headers(self): #, access_token):
