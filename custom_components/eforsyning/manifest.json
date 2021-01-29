@@ -4,8 +4,7 @@
   "config_flow": true,
   "documentation": "https://www.home-assistant.io/integrations/eforsyning",
   "requirements": [
-    "requests==2.22.0",
-    "hashlib"
+    "requests==2.22.0"
   ],
   "ssdp": [],
   "zeroconf": [],
