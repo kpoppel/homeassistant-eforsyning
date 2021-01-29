@@ -175,7 +175,7 @@ class Eforsyning:
         result_json = result.json()
         _LOGGER.debug(f"login status: {result_json} - {result_json['Result']}")
         result_status = result_json['Result']
-        if result_status['Result'] == 1:
+        if result_status == 1:
             _LOGGER.debug("Login success")
         else:
             _LOGGER.debug("Login failed. Bye.")
