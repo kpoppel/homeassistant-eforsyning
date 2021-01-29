@@ -28,8 +28,8 @@ class Eforsyning:
         ## Assume people only have a single metering device.
         ## Feel free to expand the code to find all metering devices
         ## and iterate over them.
-        asset_id = 1
-        installation_id = 1
+        self._asset_id = 1
+        self._installation_id = 1
 
 #    def _get_customer_data(self):
 #        result = requests.get(api_server + "api/getebrugerinfo?id=" + crypt_id)
