@@ -28,6 +28,7 @@ class Eforsyning:
         ## Assume people only have a single metering device.
         ## Feel free to expand the code to find all metering devices
         ## and iterate over them.
+        ## Must be a string - see where it is used.
         self._asset_id = "1"
         self._installation_id = "1"
 
@@ -260,7 +261,8 @@ class Eforsyning:
         metering_data['water-exp-used'] = random.randint(0, 100)
         metering_data['water-exp-end'] = random.randint(0, 100)
 
-        time_series = TimeSeries(200, "20200128", metering_data)
+        date = datetime.strptime("2020-01-28T14:45:12Z", '%Y-%m-%dT%H:%M:%SZ')
+        time_series = TimeSeries(200, date, metering_data)
         parsed_result['20200128'] = time_series
         _LOGGER.debug(f"Done parsing results")
         return parsed_result
