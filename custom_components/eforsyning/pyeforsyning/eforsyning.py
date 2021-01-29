@@ -80,9 +80,9 @@ class Eforsyning:
             data_exp_read = "true"
 
         data = {
-                "Ejendomnr":username,
-                "AktivNr":asset_id,
-                "I_Nr":installation_id,
+                "Ejendomnr":self._username,
+                "AktivNr":self._asset_id,
+                "I_Nr":self._installation_id,
                 "AarsMaerke":year,
                 "ForbrugsAfgraensning_FraDato":parsed_from_date,
                 "ForbrugsAfgraensning_TilDato":parsed_to_date,
