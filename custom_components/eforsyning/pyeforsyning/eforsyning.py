@@ -160,7 +160,7 @@ class Eforsyning:
         result_json = result.json()
         token = result_json['Token']
         _LOGGER.debug(f"result for token: {result_json} - {token}")
-        ## TODO exception if token is ''
+        ## TODO exception if token is '' (validate username)
         hashed_password = hashlib.md5(self._password.encode()).hexdigest()
         crypt_string = hashed_password + token
         access_token = hashlib.md5(crypt_string.encode()).hexdigest()
@@ -173,6 +173,7 @@ class Eforsyning:
         result = requests.get(self._api_server + auth_url + access_token)
         result.raise_for_status()
         result_json = result.json()
+        _LOGGER.debug(f"login status: {result_json}")
         result_status = result_json['Result']
         if result_status['Result'] == 1:
             _LOGGER.debug("Login success\n")
