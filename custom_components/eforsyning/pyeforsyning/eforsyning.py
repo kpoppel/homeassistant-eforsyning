@@ -24,6 +24,11 @@ class Eforsyning:
         self._supplierid = supplierid
         self._base_url = 'https://eforsyning.dk/'
         self._api_server = ""
+        ## Assume people only have a single metering device.
+        ## Feel free to expand the code to find all metering devices
+        ## and iterate over them.
+        asset_id = 1
+        installation_id = 1
 
 #    def _get_customer_data(self):
 #        result = requests.get(api_server + "api/getebrugerinfo?id=" + crypt_id)
@@ -54,14 +59,21 @@ class Eforsyning:
         if to_date is None:
             to_date = datetime.now()
 
+        _LOGGER.debug(f"1")
         
         access_token = self._get_access_token()
+
+        _LOGGER.debug(f"2")
 
         date_format = '%d-%m-%Y'
         parsed_from_date = from_date.strftime(date_format)
         parsed_to_date = to_date.strftime(date_format)
 
+        _LOGGER.debug(f"3")
+
         headers = self._create_headers(access_token)
+
+        _LOGGER.debug(f"4")
 
         post_meter_data_url = "api/getforbrug?id="+access_token+"&unr="+self._username+"&anr="+self._asset_id+"&inr="+self._installation_id # POST
 
