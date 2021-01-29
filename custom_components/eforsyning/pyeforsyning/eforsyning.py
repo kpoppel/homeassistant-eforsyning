@@ -153,13 +153,15 @@ class Eforsyning:
             self._api_server = self._get_api_server()
 
         # With the API server URL we can authenticate and get a token:
-        security_token_url = "system/getsecuritytoken/project/app/consumer/"
-        result = requests.get(self._api_server + security_token_url + self._username)
+        security_token_url = self._api_server + "system/getsecuritytoken/project/app/consumer/" + self._username
+        _LOGGER.debug(f"token URL: {security_token_url}")
+        result = requests.get(security_token_url)
         result.raise_for_status()
         result_json = result.json()
-        _LOGGER.debug(f"result for token: {result_json}")
         token = result_json['Token']
-        hashed_password = hashlib.md5(password.encode()).hexdigest();
+        _LOGGER.debug(f"result for token: {result_json} - {token}")
+        ## TODO exception if token is ''
+        hashed_password = hashlib.md5(self._password.encode()).hexdigest()
         crypt_string = hashed_password + token
         access_token = hashlib.md5(crypt_string.encode()).hexdigest()
 
