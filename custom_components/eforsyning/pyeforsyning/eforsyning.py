@@ -173,12 +173,12 @@ class Eforsyning:
         result = requests.get(self._api_server + auth_url + access_token)
         result.raise_for_status()
         result_json = result.json()
-        _LOGGER.debug(f"login status: {result_json}")
+        _LOGGER.debug(f"login status: {result_json} - {result_json['Result']}")
         result_status = result_json['Result']
         if result_status['Result'] == 1:
-            _LOGGER.debug("Login success\n")
+            _LOGGER.debug("Login success")
         else:
-            _LOGGER.debug("Login failed. Bye.\n")
+            _LOGGER.debug("Login failed. Bye.")
 
         _LOGGER.debug(f"Got access token: {access_token}")
         return access_token
