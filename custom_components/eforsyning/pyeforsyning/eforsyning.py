@@ -72,7 +72,7 @@ class Eforsyning:
 
         _LOGGER.debug(f"3")
 
-        headers = self._create_headers(access_token)
+        headers = self._create_headers()
 
         _LOGGER.debug(f"4")
 
@@ -183,9 +183,8 @@ class Eforsyning:
         _LOGGER.debug(f"Got access token: {access_token}")
         return access_token
 
-    def _create_headers(self): #, access_token):
+    def _create_headers(self):
         return {
-                #'Authorization': 'Bearer ' + access_token,
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'}
 
