@@ -6,6 +6,7 @@ from datetime import timedelta
 import json
 import requests
 import logging
+import hashlib
 from .models import RawResponse
 from .models import TimeSeries
 
