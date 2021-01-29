@@ -25,15 +25,15 @@ class Eforsyning:
         self._base_url = 'https://eforsyning.dk/'
         self._api_server = ""
 
-    def _get_customer_data(self):
-        result = requests.get(api_server + "api/getebrugerinfo?id=" + crypt_id)
-        euser_id = str(result_dict['id'])
-
-        raw_response = RawResponse()
-        raw_response.status = result.status_code
-        raw_response.body = result.text
-
-        return raw_response
+#    def _get_customer_data(self):
+#        result = requests.get(api_server + "api/getebrugerinfo?id=" + crypt_id)
+#        euser_id = str(result_dict['id'])
+#
+#        raw_response = RawResponse()
+#        raw_response.status = result.status_code
+#        raw_response.body = result.text
+#
+#        return raw_response
 
 
     def _get_time_series(self,
@@ -47,6 +47,8 @@ class Eforsyning:
         '''
         Call time series API on eforsyning.dk. Defaults to yesterdays data.
         '''
+        _LOGGER.debug(f"get the time series")
+
         if from_date is None:
             from_date = datetime.now()-timedelta(days=1)
         if to_date is None:
@@ -61,7 +63,7 @@ class Eforsyning:
 
 #        headers = self._create_headers(access_token)
 
-        post_meter_data_url = "api/getforbrug?id="+crypt_id+"&unr="+username+"&anr="+asset_id+"&inr="+installation_id # POST
+        post_meter_data_url = "api/getforbrug?id="+access_token+"&unr="+self._username+"&anr="+self._asset_id+"&inr="+self._installation_id # POST
 
         include_data_in_between = "false"
         if month or day:
@@ -112,6 +114,8 @@ class Eforsyning:
         raw_response.status = result.status_code
         raw_response.body = result.text
 
+        _LOGGER.debug(f"Done getting the time series")
+
         return raw_response
 
     def _get_api_server(self):
@@ -133,12 +137,12 @@ class Eforsyning:
         token = result_json['Token']
         hashed_password = hashlib.md5(password.encode()).hexdigest();
         crypt_string = hashed_password + token
-        crypt_id = hashlib.md5(crypt_string.encode()).hexdigest()
+        access_token = hashlib.md5(crypt_string.encode()).hexdigest()
 
         # Use the new token to login to the API service
         auth_url = "system/login/project/app/consumer/"+self._username+"/installation/1/id/"
 
-        result = requests.get(self._api_server + auth_url + crypt_id)
+        result = requests.get(self._api_server + auth_url + access_token)
         result.raise_for_status()
         result_json = token_response.json()
         result_status = token_json['Result']
@@ -147,8 +151,8 @@ class Eforsyning:
         else:
             _LOGGER.debug("Login failed. Bye.\n")
 
-        _LOGGER.debug(f"Got short lived token: {crypt_id}")
-        return crypt_id
+        _LOGGER.debug(f"Got short lived token: {access_token}")
+        return access_token
 
     def _create_headers(self): #, access_token):
         return {
@@ -185,6 +189,8 @@ class Eforsyning:
                                          day=True,
                                          from_date=datetime.now()-timedelta(days=1),
                                          to_date=datetime.now())
+
+        _LOGGER.debug(f"Getting latest data")
 
         if raw_data.status == 200:
             json_response = json.loads(raw_data.body)
