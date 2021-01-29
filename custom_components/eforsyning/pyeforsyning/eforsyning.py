@@ -157,10 +157,13 @@ class Eforsyning:
         result = requests.get(self._api_server + security_token_url + self._username)
         result.raise_for_status()
         result_json = result.json()
+        _LOGGER.debug(f"result for token: {result_json}")
         token = result_json['Token']
         hashed_password = hashlib.md5(password.encode()).hexdigest();
         crypt_string = hashed_password + token
         access_token = hashlib.md5(crypt_string.encode()).hexdigest()
+
+        _LOGGER.debug(f"access token: {access_token}")
 
         # Use the new token to login to the API service
         auth_url = "system/login/project/app/consumer/"+self._username+"/installation/1/id/"
@@ -168,7 +171,7 @@ class Eforsyning:
         result = requests.get(self._api_server + auth_url + access_token)
         result.raise_for_status()
         result_json = result.json()
-        result_status = token_json['Result']
+        result_status = result_json['Result']
         if result_status['Result'] == 1:
             _LOGGER.debug("Login success\n")
         else:
