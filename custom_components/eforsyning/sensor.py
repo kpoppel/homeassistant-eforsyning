@@ -121,6 +121,6 @@ class EforsyningEnergy(Entity):
         self._data.update()        
 
         self._data_date = self._data.get_data_date()
-        self._state = self._data.get_data(self._sensor_value)
+        self._state = self._data.get_data()
         _LOGGER.debug(f"Done updating data")
 
