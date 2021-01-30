@@ -44,8 +44,8 @@ class Eforsyning:
 
 
     def _get_time_series(self,
-                        from_date=None,  # Will be set to yesterday
-                        to_date=None,    # Will be set to today
+                        from_date=None,
+                        to_date=None,
                         year = "0",
                         month = False,
                         day = False,
@@ -53,29 +53,25 @@ class Eforsyning:
                        ):
         '''
         Call time series API on eforsyning.dk. Defaults to yesterdays data.
+        NOTE: The API service actually don't care about the dates at this point in time.
+              Regardless of what we ask for, all data in the requested resolution
+              (Year, Monthly, Daily) is returned.  This means requesting daily data
+              will return a massive array of 365'is data points!
         '''
-        _LOGGER.debug(f"get the time series")
+        _LOGGER.debug(f"Getting time series")
 
         if from_date is None:
             from_date = datetime.now()-timedelta(days=1)
         if to_date is None:
             to_date = datetime.now()
 
-        _LOGGER.debug(f"1")
-        
         access_token = self._get_access_token()
-
-        _LOGGER.debug(f"2")
 
         date_format = '%d-%m-%Y'
         parsed_from_date = from_date.strftime(date_format)
         parsed_to_date = to_date.strftime(date_format)
 
-        _LOGGER.debug(f"3")
-
         headers = self._create_headers()
-
-        _LOGGER.debug(f"4")
 
         post_meter_data_url = "api/getforbrug?id="+access_token+"&unr="+self._username+"&anr="+self._asset_id+"&inr="+self._installation_id # POST
 
@@ -116,8 +112,6 @@ class Eforsyning:
                 "OmregnForbrugTilAktuelleEnhed":"true" # true || false
             }
 
-        _LOGGER.debug(f"Data for POST: {data}")
-
         result = requests.post(self._api_server + post_meter_data_url,
                                 data = json.dumps(data),
                                 timeout = 5,
@@ -130,17 +124,16 @@ class Eforsyning:
         raw_response.status = result.status_code
         raw_response.body = result.text
 
-        _LOGGER.debug(f"Done getting the time series")
+        _LOGGER.debug(f"Done getting time series")
 
         return raw_response
 
     def _get_api_server(self):
-        _LOGGER.debug(f"getting api server")
+        _LOGGER.debug(f"Getting api server")
         ## Get the URL to the REST API service
         settingsURL="/umbraco/dff/dffapi/GetVaerkSettings?forsyningid="
         result = requests.get(self._base_url + settingsURL + self._supplierid)
         result_json = result.json()
-        _LOGGER.debug(f"result JSON {result_json}")
         api_server = result_json['AppServerUri']
 
         _LOGGER.debug(f"Done getting api server {api_server}")
@@ -148,25 +141,21 @@ class Eforsyning:
         return api_server
 
     def _get_access_token(self):
-        _LOGGER.debug(f"getting access token")
+        _LOGGER.debug(f"Getting access token")
 
         if self._api_server == "":
             self._api_server = self._get_api_server()
 
         # With the API server URL we can authenticate and get a token:
         security_token_url = self._api_server + "system/getsecuritytoken/project/app/consumer/" + self._username
-        _LOGGER.debug(f"token URL: {security_token_url}")
         result = requests.get(security_token_url)
         result.raise_for_status()
         result_json = result.json()
         token = result_json['Token']
-        _LOGGER.debug(f"result for token: {result_json} - {token}")
-        ## TODO exception if token is '' (validate username)
+        ## TODO exception if token is '' (this happens if the username is invalid)
         hashed_password = hashlib.md5(self._password.encode()).hexdigest()
         crypt_string = hashed_password + token
         access_token = hashlib.md5(crypt_string.encode()).hexdigest()
-
-        _LOGGER.debug(f"access token: {access_token}")
 
         # Use the new token to login to the API service
         auth_url = "system/login/project/app/consumer/"+self._username+"/installation/1/id/"
@@ -174,7 +163,6 @@ class Eforsyning:
         result = requests.get(self._api_server + auth_url + access_token)
         result.raise_for_status()
         result_json = result.json()
-        _LOGGER.debug(f"login status: {result_json} - {result_json['Result']}")
         result_status = result_json['Result']
         if result_status == 1:
             _LOGGER.debug("Login success")
@@ -189,37 +177,16 @@ class Eforsyning:
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'}
 
-#    def get_yesterday_parsed(self, metering_point):
-#        '''
-#        Get data for yesterday and parse it.
-#        '''
-#        return
-#
-#        raw_data = self.get_time_series(metering_point)
-#
-#        if raw_data.status == 200:
-#            json_response = json.loads(raw_data.body)
-#
-#            result_dict = self._parse_result(json_response)
-#            (key, value) = result_dict.popitem()
-#            result = value
-#        else:
-#            result = TimeSeries(raw_data.status, None, None, raw_data.body)
-#
-#        return result
-
     def get_latest(self):
         '''
-        Get latest data. Will look for one day except eforsyning returns for a full year.
+        Get latest data.
         '''
         _LOGGER.debug(f"Getting latest data")
 
-        raw_data = self._get_time_series(year="2020",
+        raw_data = self._get_time_series(year=datetime.now().year,
                                         #day=True, # TODO: Lets just see if pulling year data does not update daily.
                                          from_date=datetime.now()-timedelta(days=1),
                                          to_date=datetime.now())
-
-        _LOGGER.debug(f"Getting latest data")
 
         if raw_data.status == 200:
             json_response = json.loads(raw_data.body)
@@ -276,6 +243,7 @@ class Eforsyning:
         # The date is generated internally to bo todays day of course.
         date = datetime.now()
 
+# Fake data testing:
 #        metering_data['temp-forward'] = random.randint(0, 100)
 #        metering_data['temp-return'] = random.randint(0, 100)
 #        metering_data['temp-exp-return'] = random.randint(0, 100)
@@ -290,45 +258,9 @@ class Eforsyning:
 #        metering_data['water-used'] = random.randint(0, 100)
 #        metering_data['water-exp-used'] = random.randint(0, 100)
 #        metering_data['water-exp-end'] = random.randint(0, 100)
-
 #        date = datetime.strptime("2020-01-28T14:45:12Z", '%Y-%m-%dT%H:%M:%SZ')
+
         time_series = TimeSeries(200, date, metering_data)
         parsed_result[date] = time_series
         _LOGGER.debug(f"Done parsing results")
         return parsed_result
-
-#        if 'result' in result and len(result['result']) > 0:
-#            market_document = result['result'][0]['MyEnergyData_MarketDocument']
-#            if 'TimeSeries' in market_document and len(market_document['TimeSeries']) > 0:
-#                time_series = market_document['TimeSeries'][0]
-#
-#                if 'Period' in time_series and len(time_series['Period']) > 0:
-#                    for period in time_series['Period']:
-#                        metering_data = []
-#
-#                        point = period['Point']
-#                        for i in point:
-#                            metering_data.append(float(i['out_Quantity.quantity']))
-#
-#                        date = datetime.strptime(period['timeInterval']['end'], '%Y-%m-%dT%H:%M:%SZ')
-#
-#                        time_series = TimeSeries(200, date, metering_data)
-#
-#                        parsed_result[date] = time_series
-#                else:
-#                    parsed_result['none'] = TimeSeries(404,
-#                                                       None,
-#                                                       None,
-#                                                       f"Data most likely not available yet-1: {result}")
-#            else:
-#                parsed_result['none'] = TimeSeries(404,
-#                                                   None,
-#                                                   None,
-#                                                   f"Data most likely not available yet-2: {result}")
-#        else:
-#            parsed_result['none'] =  TimeSeries(404,
-#                                                None,
-#                                                None,
-#                                                f"Data most likely not available yet-3: {result}")
-#
-#        return parsed_result
