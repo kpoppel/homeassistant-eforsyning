@@ -248,7 +248,7 @@ class Eforsyning:
         metering_data = {}
         metering_data['year_start'] = result.body['AarStart']
         metering_data['year_end']   = result.body['AarSlut']
-        for fl in data['ForbrugsLinjer']['TForbrugsLinje']:
+        for fl in result.body['ForbrugsLinjer']['TForbrugsLinje']:
             metering_data['temp-forward'] = fl['Tempfrem']
             metering_data['temp-return'] = fl['TempRetur']
             metering_data['temp-exp-return'] = fl['Forv_Retur']
@@ -297,38 +297,38 @@ class Eforsyning:
         _LOGGER.debug(f"Done parsing results")
         return parsed_result
 
-        if 'result' in result and len(result['result']) > 0:
-            market_document = result['result'][0]['MyEnergyData_MarketDocument']
-            if 'TimeSeries' in market_document and len(market_document['TimeSeries']) > 0:
-                time_series = market_document['TimeSeries'][0]
-
-                if 'Period' in time_series and len(time_series['Period']) > 0:
-                    for period in time_series['Period']:
-                        metering_data = []
-
-                        point = period['Point']
-                        for i in point:
-                            metering_data.append(float(i['out_Quantity.quantity']))
-
-                        date = datetime.strptime(period['timeInterval']['end'], '%Y-%m-%dT%H:%M:%SZ')
-
-                        time_series = TimeSeries(200, date, metering_data)
-
-                        parsed_result[date] = time_series
-                else:
-                    parsed_result['none'] = TimeSeries(404,
-                                                       None,
-                                                       None,
-                                                       f"Data most likely not available yet-1: {result}")
-            else:
-                parsed_result['none'] = TimeSeries(404,
-                                                   None,
-                                                   None,
-                                                   f"Data most likely not available yet-2: {result}")
-        else:
-            parsed_result['none'] =  TimeSeries(404,
-                                                None,
-                                                None,
-                                                f"Data most likely not available yet-3: {result}")
-
-        return parsed_result
+#        if 'result' in result and len(result['result']) > 0:
+#            market_document = result['result'][0]['MyEnergyData_MarketDocument']
+#            if 'TimeSeries' in market_document and len(market_document['TimeSeries']) > 0:
+#                time_series = market_document['TimeSeries'][0]
+#
+#                if 'Period' in time_series and len(time_series['Period']) > 0:
+#                    for period in time_series['Period']:
+#                        metering_data = []
+#
+#                        point = period['Point']
+#                        for i in point:
+#                            metering_data.append(float(i['out_Quantity.quantity']))
+#
+#                        date = datetime.strptime(period['timeInterval']['end'], '%Y-%m-%dT%H:%M:%SZ')
+#
+#                        time_series = TimeSeries(200, date, metering_data)
+#
+#                        parsed_result[date] = time_series
+#                else:
+#                    parsed_result['none'] = TimeSeries(404,
+#                                                       None,
+#                                                       None,
+#                                                       f"Data most likely not available yet-1: {result}")
+#            else:
+#                parsed_result['none'] = TimeSeries(404,
+#                                                   None,
+#                                                   None,
+#                                                   f"Data most likely not available yet-2: {result}")
+#        else:
+#            parsed_result['none'] =  TimeSeries(404,
+#                                                None,
+#                                                None,
+#                                                f"Data most likely not available yet-3: {result}")
+#
+#        return parsed_result
