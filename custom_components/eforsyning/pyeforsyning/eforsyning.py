@@ -215,7 +215,7 @@ class Eforsyning:
         _LOGGER.debug(f"Getting latest data")
 
         raw_data = self._get_time_series(year="2020",
-                                         day=True,
+                                        #day=True, # TODO: Lets just see if pulling year data does not update daily.
                                          from_date=datetime.now()-timedelta(days=1),
                                          to_date=datetime.now())
 
@@ -246,24 +246,54 @@ class Eforsyning:
         parsed_result = {}
 
         metering_data = {}
-        metering_data['temp-forward'] = random.randint(0, 100)
-        metering_data['temp-return'] = random.randint(0, 100)
-        metering_data['temp-exp-return'] = random.randint(0, 100)
-        metering_data['temp-meas-return'] = random.randint(0, 100)
-        metering_data['energy-start'] = random.randint(0, 100)
-        metering_data['energy-end'] = random.randint(0, 100)
-        metering_data['energy-used'] = random.randint(0, 100)
-        metering_data['energy-exp-used'] = random.randint(0, 100)
-        metering_data['energy-exp-end'] = random.randint(0, 100)
-        metering_data['water-start'] = random.randint(0, 100)
-        metering_data['water-end'] = random.randint(0, 100)
-        metering_data['water-used'] = random.randint(0, 100)
-        metering_data['water-exp-used'] = random.randint(0, 100)
-        metering_data['water-exp-end'] = random.randint(0, 100)
+        metering_data['year_start'] = result.body['AarStart']
+        metering_data['year_end']   = result.body['AarSlut']
+        for fl in data['ForbrugsLinjer']['TForbrugsLinje']:
+            metering_data['temp-forward'] = fl['Tempfrem']
+            metering_data['temp-return'] = fl['TempRetur']
+            metering_data['temp-exp-return'] = fl['Forv_Retur']
+            metering_data['temp-meas-return'] = fl['Afkoling']
+            for reading in fl['TForbrugsTaellevaerk']:
+                unit = reading['Enhed_Txt']
+                if reading['IndexNavn'] == "ENG1":
+                    metering_data['energy-start'] = reading['Start']
+                    metering_data['energy-end'] = reading['Slut']
+                    metering_data['energy-used'] = reading['Forbrug']
+                    metering_data['energy-exp-used'] = fl['ForventetForbrugENG1']
+                    metering_data['energy-exp-end'] = fl['ForventetAflaesningENG1']
+                elif reading['IndexNavn'] == "M3":
+                    metering_data['water-start'] = reading['Start']
+                    metering_data['water-end'] = reading['Slut']
+                    metering_data['water-used'] = reading['Forbrug']
+                    metering_data['water-exp-used'] = fl['ForventetForbrugM3']
+                    metering_data['water-exp-end'] = fl['ForventetAflaesningM3']
+                else:
+                    metering_data['extra-start'] = reading['Start']
+                    metering_data['extra-end'] = reading['Slut']
+                    metering_data['extra-used'] = reading['Forbrug']
 
-        date = datetime.strptime("2020-01-28T14:45:12Z", '%Y-%m-%dT%H:%M:%SZ')
+        # Because we are fetching data from the full year (or so far)
+        # The date is generated internally to bo todays day of course.
+        date = datetime.now()
+
+#        metering_data['temp-forward'] = random.randint(0, 100)
+#        metering_data['temp-return'] = random.randint(0, 100)
+#        metering_data['temp-exp-return'] = random.randint(0, 100)
+#        metering_data['temp-meas-return'] = random.randint(0, 100)
+#        metering_data['energy-start'] = random.randint(0, 100)
+#        metering_data['energy-end'] = random.randint(0, 100)
+#        metering_data['energy-used'] = random.randint(0, 100)
+#        metering_data['energy-exp-used'] = random.randint(0, 100)
+#        metering_data['energy-exp-end'] = random.randint(0, 100)
+#        metering_data['water-start'] = random.randint(0, 100)
+#        metering_data['water-end'] = random.randint(0, 100)
+#        metering_data['water-used'] = random.randint(0, 100)
+#        metering_data['water-exp-used'] = random.randint(0, 100)
+#        metering_data['water-exp-end'] = random.randint(0, 100)
+
+#        date = datetime.strptime("2020-01-28T14:45:12Z", '%Y-%m-%dT%H:%M:%SZ')
         time_series = TimeSeries(200, date, metering_data)
-        parsed_result['20200128'] = time_series
+        parsed_result[date] = time_series
         _LOGGER.debug(f"Done parsing results")
         return parsed_result
 
