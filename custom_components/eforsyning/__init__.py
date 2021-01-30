@@ -37,11 +37,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     username = entry.data['username']
     password = entry.data['password']
     supplierid = entry.data['supplierid']
-    ## Assume people only have a single metering device.
-    ## Feel free to expand the code to find all metering devices
-    ## and iterate over them.
-    asset_id = 1
-    installation_id = 1
     
     hass.data[DOMAIN][entry.entry_id] = HassEforsyning(username, password, supplierid)
 
@@ -74,18 +69,8 @@ class HassEforsyning:
 
         self._data = None
 
-#    def get_total_day(self):
-#        if self._data != None:
-#            return round(self._data.get_total_metering_data(), 3)
-#        else:
-#            return None
-
-#    def get_usage_hour(self, hour):
-#        if self._data != None:
-#            return round(self._data.get_metering_data(hour), 3)
-#        else:
-#            return None
     def get_data(self, data_point):
+        """ Get the sensor reading from the eforsyning library"""
         if self._data != None:
             return self._data.get_data_point(data_point)
         else:
