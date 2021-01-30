@@ -240,15 +240,15 @@ class Eforsyning:
 
     def _parse_result(self, result):
         '''
-        Parse result from API call.
+        Parse result from API call. This is a JSON dict.
         '''
         _LOGGER.debug(f"Parsing results")
         parsed_result = {}
 
         metering_data = {}
-        metering_data['year_start'] = result.body['AarStart']
-        metering_data['year_end']   = result.body['AarSlut']
-        for fl in result.body['ForbrugsLinjer']['TForbrugsLinje']:
+        metering_data['year_start'] = result['AarStart']
+        metering_data['year_end']   = result['AarSlut']
+        for fl in result['ForbrugsLinjer']['TForbrugsLinje']:
             metering_data['temp-forward'] = fl['Tempfrem']
             metering_data['temp-return'] = fl['TempRetur']
             metering_data['temp-exp-return'] = fl['Forv_Retur']
