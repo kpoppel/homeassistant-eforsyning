@@ -227,21 +227,21 @@ class Eforsyning:
             for reading in fl['TForbrugsTaellevaerk']:
                 unit = reading['Enhed_Txt']
                 if reading['IndexNavn'] == "ENG1":
-                    metering_data['energy-start'] = reading['Start']
-                    metering_data['energy-end'] = reading['Slut']
-                    metering_data['energy-used'] = reading['Forbrug']
-                    metering_data['energy-exp-used'] = fl['ForventetForbrugENG1']
-                    metering_data['energy-exp-end'] = fl['ForventetAflaesningENG1']
+                    metering_data['energy-start'] = self._stof(reading['Start'])
+                    metering_data['energy-end'] = self._stof(reading['Slut'])
+                    metering_data['energy-used'] = self._stof(reading['Forbrug'])
+                    metering_data['energy-exp-used'] = self._stof(fl['ForventetForbrugENG1'])
+                    metering_data['energy-exp-end'] = self._stof(fl['ForventetAflaesningENG1'])
                 elif reading['IndexNavn'] == "M3":
-                    metering_data['water-start'] = reading['Start']
-                    metering_data['water-end'] = reading['Slut']
-                    metering_data['water-used'] = reading['Forbrug']
-                    metering_data['water-exp-used'] = fl['ForventetForbrugM3']
-                    metering_data['water-exp-end'] = fl['ForventetAflaesningM3']
+                    metering_data['water-start'] = self._stof(reading['Start'])
+                    metering_data['water-end'] = self._stof(reading['Slut'])
+                    metering_data['water-used'] = self._stof(reading['Forbrug'])
+                    metering_data['water-exp-used'] = self._stof(fl['ForventetForbrugM3'])
+                    metering_data['water-exp-end'] = self._stof(fl['ForventetAflaesningM3'])
                 else:
-                    metering_data['extra-start'] = reading['Start']
-                    metering_data['extra-end'] = reading['Slut']
-                    metering_data['extra-used'] = reading['Forbrug']
+                    metering_data['extra-start'] = self._stof(reading['Start'])
+                    metering_data['extra-end'] = self._stof(reading['Slut'])
+                    metering_data['extra-used'] = self._stof(reading['Forbrug'])
 
         # Because we are fetching data from the full year (or so far)
         # The date is generated internally to bo todays day of course.
