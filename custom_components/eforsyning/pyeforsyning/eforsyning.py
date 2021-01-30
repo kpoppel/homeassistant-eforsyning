@@ -205,6 +205,10 @@ class Eforsyning:
         _LOGGER.debug(f"Done getting latest data")
         return result
 
+    def stof(fstr):
+        """Convert string with ',' string float to float"""
+        return float(fstr.replace(',', '.'))
+
     def _parse_result(self, result):
         '''
         Parse result from API call. This is a JSON dict.
@@ -216,10 +220,10 @@ class Eforsyning:
         metering_data['year_start'] = result['AarStart']
         metering_data['year_end']   = result['AarSlut']
         for fl in result['ForbrugsLinjer']['TForbrugsLinje']:
-            metering_data['temp-forward'] = fl['Tempfrem']
-            metering_data['temp-return'] = fl['TempRetur']
-            metering_data['temp-exp-return'] = fl['Forv_Retur']
-            metering_data['temp-meas-return'] = fl['Afkoling']
+            metering_data['temp-forward'] = stof(fl['Tempfrem'])
+            metering_data['temp-return'] = stof(fl['TempRetur'])
+            metering_data['temp-exp-return'] = stof(fl['Forv_Retur'])
+            metering_data['temp-meas-return'] = stof(fl['Afkoling'])
             for reading in fl['TForbrugsTaellevaerk']:
                 unit = reading['Enhed_Txt']
                 if reading['IndexNavn'] == "ENG1":
