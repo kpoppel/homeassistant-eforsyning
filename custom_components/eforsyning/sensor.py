@@ -104,13 +104,13 @@ class EforsyningEnergy(Entity):
         attributes = dict()
         attributes['Metering date'] = self._data_date
         attributes['metering_date'] = self._data_date
-        
         return attributes
 
     @property
     def unit_of_measurement(self):
         """Return the unit of measurement."""
-        self._unit
+        _LOGGER.debug("My unit is")
+        return self._unit
 
     def update(self):
         """Fetch new state data for the sensor.
