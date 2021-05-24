@@ -109,18 +109,17 @@ class EforsyningEnergy(Entity):
     @property
     def unit_of_measurement(self):
         """Return the unit of measurement."""
-        _LOGGER.debug("My unit is")
         return self._unit
 
     def update(self):
         """Fetch new state data for the sensor.
         This is the only method that should fetch new data for Home Assistant.
         """
-        _LOGGER.debug(f"Updating data")
+        _LOGGER.debug(f"Setting status for {self._name}")
 
         self._data.update()        
 
         self._data_date = self._data.get_data_date()
         self._state = self._data.get_data(self._sensor_value)
-        _LOGGER.debug(f"Done updating data")
+        _LOGGER.debug(f"Done setting status for {self.name} = {self._state} {self._unit}")
 
