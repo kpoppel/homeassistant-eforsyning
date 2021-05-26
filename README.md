@@ -78,12 +78,25 @@ logger:
 ### Daily average and gauge bar indicating high usage
 Below example is an example how to display daily average and a guage indicating high usage. 
 
-![alt text](images/example1.png "Gauge Example")
+![alt text](images/example1.png "Energy used and expected example")
 
 
 **Requirements**
 
 * Recorder component holding minimum the number of days the average display should cover.
-* Lovelace Config Template Card (https://github.com/iantrich/config-template-card)
 
 ```
+type: vertical-stack
+cards:
+  - type: 'custom:mini-graph-card'
+    hours_to_show: 720
+    smoothing: false
+    group_by: date
+    name: Fjernvarme - energi
+    entities:
+      - entity: sensor.eforsyning_energy_used
+        name: Forbrug
+      - entity: sensor.eforsyning_energy_exp_used
+        name: Forventet Forbrug
+  ...add more cards here...
+  ```
