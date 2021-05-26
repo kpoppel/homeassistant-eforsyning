@@ -129,7 +129,7 @@ class Eforsyning:
         return raw_response
 
     def _get_api_server(self):
-        _LOGGER.debug(f"Getting api server")
+        _LOGGER.debug(f"Getting api server at supplier {self._supplierid}")
         ## Get the URL to the REST API service
         settingsURL="/umbraco/dff/dffapi/GetVaerkSettings?forsyningid="
         result = requests.get(self._base_url + settingsURL + self._supplierid)
