@@ -75,8 +75,8 @@ logger:
 
 ## Examples
 
-### Daily average and gauge bar indicating high usage
-Below example is an example how to display daily average and a guage indicating high usage. 
+### Daily and expected energy use some days back
+Below is an example of how to display energy used vs expected in a graph. 
 
 ![alt text](images/example1.png "Energy used and expected example")
 
@@ -84,6 +84,7 @@ Below example is an example how to display daily average and a guage indicating 
 **Requirements**
 
 * Recorder component holding minimum the number of days the average display should cover.
+* The custom component mini-graph-card (which is great)
 
 ```
 type: vertical-stack
