@@ -40,8 +40,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
     username = entry.data['username']
     password = entry.data['password']
     supplierid = entry.data['supplierid']
+    billing_period_skew = entry.data['billing_period_skew'] # This one is true if the billing period is from July to June
     
-    hass.data[DOMAIN][entry.entry_id] = HassEforsyning(username, password, supplierid)
+    hass.data[DOMAIN][entry.entry_id] = HassEforsyning(username, password, supplierid, billing_period_skew)
 
     for component in PLATFORMS:
         hass.async_create_task(
@@ -67,8 +68,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
     return unload_ok
 
 class HassEforsyning:
-    def __init__(self, username, password, supplierid):
-        self._client = Eforsyning(username, password, supplierid)
+    def __init__(self, username, password, supplierid, billing_period_skew):
+        self._client = Eforsyning(username, password, supplierid, billing_period_skew)
 
         self._data = None
 
@@ -88,7 +89,7 @@ class HassEforsyning:
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     def update(self):
         _LOGGER.debug("Fetching data from Eforsyning")
-
+ 
         try: 
             data = self._client.get_latest()
             if data.status == 200:

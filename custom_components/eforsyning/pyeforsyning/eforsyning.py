@@ -19,10 +19,11 @@ class Eforsyning:
     '''
     Primary exported interface for eforsyning.dk API wrapper.
     '''
-    def __init__(self, username, password, supplierid):
+    def __init__(self, username, password, supplierid, billing_period_skew):
         self._username = username
         self._password = password
         self._supplierid = supplierid
+        self._billing_period_skew = billing_period_skew
         self._base_url = 'https://eforsyning.dk/'
         self._api_server = ""
         ## Assume people only have a single metering device.
@@ -183,7 +184,15 @@ class Eforsyning:
         '''
         _LOGGER.debug(f"Getting latest data")
 
-        raw_data = self._get_time_series(year=datetime.now().year,
+        # Calcuate the year parameter.  If the billing period is not skewed we
+        # use the current year.  If it is skewed we must use the year before until
+        # the billing period changes from July 1st.
+        year = datetime.now().year
+        month = datetime.now().month
+        if self._billing_period_skew and month >= 1 and month <= 6:
+            year = year - 1
+
+        raw_data = self._get_time_series(year=year,
                                         #day=True, # TODO: Lets just see if pulling year data does not update daily.
                                          from_date=datetime.now()-timedelta(days=1),
                                          to_date=datetime.now())
