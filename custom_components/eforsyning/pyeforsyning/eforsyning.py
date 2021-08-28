@@ -33,16 +33,86 @@ class Eforsyning:
         self._asset_id = "1"
         self._installation_id = "1"
 
-#    def _get_customer_data(self):
-#        result = requests.get(api_server + "api/getebrugerinfo?id=" + crypt_id)
-#        euser_id = str(result_dict['id'])
-#
-#        raw_response = RawResponse()
-#        raw_response.status = result.status_code
-#        raw_response.body = result.text
-#
-#        return raw_response
+    def _get_ebrugerid(self, access_token):
+        '''
+        This method returns the "ebrugerid" which is different from the username.
+        This id is used to get the installations.
+        Parameter "id" in the returned data is the ebrugerid
+        '''
+        _LOGGER.debug(f"Getting userinfo from API (ebrugerinfo)")
+        userinfoURL = self._api_server + "api/getebrugerinfo?id=" + access_token
+        _LOGGER.debug(f"Trying: {userinfoURL}")
+        result = requests.get(userinfoURL,
+                                timeout = 5
+                              )
+        # Instead of converting with result.json() this is also possible:
+        #    euser_id = str(result_dict['id'])
 
+        result_json = result.json()
+
+        _LOGGER.debug(f"Response from userinfo API. ebrugerinfo: {result.status_code}, Body: {result.text}, ebruger: {result_json['id']}")
+
+        return result_json['id']
+
+    def _get_intallations(self, access_token):
+        '''
+        Get the installations to set installation_id and asset_id
+        Restriction:  We will find the first installation_id == 1 and
+        extract the asset_id from this only.
+        TODO: Consider enumeration of installations, or make a field in the
+        configuration to set the metering number, which is tied to the
+        installation_id and asset_id in the API.
+        This implementation is the path of least effort, so be warned about this.
+        '''
+        # https://api2.dff-edb.dk/kongerslev/api/FindInstallationer?id=fec53bccc22d0d92a9ab7e439188bd3f
+        _LOGGER.debug(f"Getting installations at supplier: {self._supplierid}")
+ 
+        ebrugerid = self._get_ebrugerid(access_token)
+
+        ## Get the URL to the REST API service
+        installationsURL=self._api_server + "api/FindInstallationer?id=" + access_token
+        _LOGGER.debug(f"Trying: {installationsURL}")
+        data = {
+                "Soegetekst": "",
+                "Skip": "0",
+                "Take": "10000",
+                "EBrugerId": ebrugerid,
+                "Huskeliste": "null",
+                "MedtagTilknyttede": "true"
+                }
+
+        headers = self._create_headers()
+
+        result = requests.post(installationsURL,
+                                data = json.dumps(data),
+                                timeout = 5,
+                                headers=headers
+                              )
+
+        _LOGGER.debug(f"Response from API. Status: {result.status_code}, Body: {result.text}")
+
+        result_json = result.json()
+        # Data looks like this:
+        #{"Installationer":[
+        #  {"EjendomNr":<int>,
+        #   "Adresse":"<str>",
+        #   "InstallationNr":<int>,
+        #   "ForbrugerNr":"<int>",
+        #   "MålerNr":"<int>",
+        #   "By":"<str>",
+        #   "PostNr":"<int>",
+        #   "AktivNr":<int>,
+        #   "Målertype":"<str>"
+        #  }
+        # ]}
+        result_json = result.json()
+        installations = result_json['Installationer'][0]
+        self._installation_id = str(installations['InstallationNr'])
+        self._asset_id = str(installations['AktivNr'])
+
+        _LOGGER.debug(f"Done getting installatons[0] {installations}")
+
+        return installations
 
     def _get_time_series(self,
                         from_date=None,
@@ -67,6 +137,8 @@ class Eforsyning:
             to_date = datetime.now()
 
         access_token = self._get_access_token()
+
+        self._get_intallations(access_token)
 
         date_format = '%d-%m-%Y'
         parsed_from_date = from_date.strftime(date_format)
@@ -112,6 +184,8 @@ class Eforsyning:
                 "MedForventetForbrug":data_exp_read, ## true || false (Include or exclude expected reading values)
                 "OmregnForbrugTilAktuelleEnhed":"true" # true || false
             }
+
+        _LOGGER.debug(f"POST data to API. {data}")
 
         result = requests.post(self._api_server + post_meter_data_url,
                                 data = json.dumps(data),
