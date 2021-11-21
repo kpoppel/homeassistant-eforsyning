@@ -142,12 +142,13 @@ class EforsyningEnergy(SensorEntity):
         """Fetch new state data for the sensor.
         This is the only method that should fetch new data for Home Assistant.
         """
-        _LOGGER.debug(f"Setting status for {self._name}")
+        _LOGGER.debug(f"Setting status for {self._attr_name}")
+        #_LOGGER.debug(f"Setting status for {self._name}")
 
         self._data.update()        
 
         self._data_date = self._data.get_data_date()
         self._attr_native_value = self._data.get_data(self._sensor_value)
         #self._state = self._data.get_data(self._sensor_value)
-        _LOGGER.debug(f"Done setting status for {self.name} = {self._attr_native_value} {self._attr_native_unit_of_measurement}")
+        _LOGGER.debug(f"Done setting status for {self._attr_name} = {self._attr_native_value} {self._attr_native_unit_of_measurement}")
 
