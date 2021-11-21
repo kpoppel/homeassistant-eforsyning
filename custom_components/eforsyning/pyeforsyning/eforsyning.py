@@ -267,7 +267,7 @@ class Eforsyning:
             year = year - 1
 
         raw_data = self._get_time_series(year=year,
-                                         day=True, # NOTE: Pulling daily data is required to get accurate temperature measurements
+                                         day=True, # NOTE: Pulling daily data is required to get non-averaged temperature measurements
                                          from_date=datetime.now()-timedelta(days=1),
                                          to_date=datetime.now())
 
@@ -327,7 +327,7 @@ class Eforsyning:
                     metering_data['extra-used'] = self._stof(reading['Forbrug'])
 
         # Because we are fetching data from the full year (or so far)
-        # The date is generated internally to bo todays day of course.
+        # The date is generated internally to be todays day of course.
         date = datetime.now()
 
 # Fake data testing:

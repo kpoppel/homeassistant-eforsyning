@@ -49,7 +49,7 @@ class TimeSeries:
                 ['temp-forward']
                 ['temp-return']
                 ['temp-exp-return']
-                ['temp-meas-return']
+                ['temp-cooling']
                 ['energy-start']
                 ['energy-end']
                 ['energy-used']

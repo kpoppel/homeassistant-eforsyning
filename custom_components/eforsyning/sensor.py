@@ -22,6 +22,14 @@ async def async_setup_entry(hass, config, async_add_entities):
 
     ## Sensors far
     # Year, Month, Day? We'll fetch data once per day.
+    # NOTE: Measurement type?
+    #   measurement     : The current value, right now.
+    #   total           : accumulated in/de-crease of a value. The absolute value is not interesting
+    #   total_increasing: accumulated monotonically increasing value. The absolute value is not interesting
+    # So, for a statistic where the daily, montly or yearly spend is more important than knowing the absolute value
+    # then total or total_increasing is good for this.
+    # For now well make all of it "measurement", and see how that goes.
+    #
     #   Temp  - forward temperature
     #   Temp  - return temperature
     #   Temp  - Expected return temperature
@@ -80,11 +88,11 @@ class EforsyningEnergy(SensorEntity):
             self._attr_icon = "mdi:lightning-bolt-circle"
             self._attr_state_class = STATE_CLASS_TOTAL
             self._attr_device_class = DEVICE_CLASS_ENERGY
-            self._attr_state_class = STATE_CLASS_TOTAL_INCREASING
+            self._attr_state_class = STATE_CLASS_MEASUREMENT #STATE_CLASS_TOTAL_INCREASING
         elif sensor_type == "water":
             self._attr_native_unit_of_measurement = VOLUME_CUBIC_METERS
             self._attr_icon = "mdi:water"
-            self._attr_state_class = STATE_CLASS_TOTAL
+            self._attr_state_class = STATE_CLASS_MEASUREMENT #STATE_CLASS_TOTAL
             # Only gas can be measured in m3
             self._attr_device_class = DEVICE_CLASS_GAS
         else:
