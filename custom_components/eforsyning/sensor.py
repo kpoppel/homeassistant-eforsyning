@@ -1,10 +1,11 @@
 """Platform for Eforsyning sensor integration."""
 import logging
-from homeassistant.const import (TEMP_CELSIUS, STATE_CLASS_TOTAL_INCREASING,
+from homeassistant.const import (TEMP_CELSIUS,
                                  DEVICE_CLASS_ENERGY, DEVICE_CLASS_TEMPERATURE,
                                  DEVICE_CLASS_GAS,
                                  ENERGY_MEGA_WATT_HOUR, VOLUME_CUBIC_METERS)
-from homeassistant.components.sensor import (SensorEntity, STATE_CLASS_MEASUREMENT, STATE_CLASS_TOTAL)
+from homeassistant.components.sensor import (SensorEntity, STATE_CLASS_MEASUREMENT, STATE_CLASS_TOTAL,
+                                            STATE_CLASS_TOTAL_INCREASING)
 #from homeassistant.helpers.entity import Entity
 from custom_components.eforsyning.pyeforsyning.eforsyning import Eforsyning
 from custom_components.eforsyning.pyeforsyning.models import TimeSeries
