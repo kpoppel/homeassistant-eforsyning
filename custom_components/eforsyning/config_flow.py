@@ -9,7 +9,14 @@ from .const import DOMAIN  # pylint:disable=unused-import
 
 _LOGGER = logging.getLogger(__name__)
 
-DATA_SCHEMA = vol.Schema({"username": str, "password": str, "supplierid": str})
+DATA_SCHEMA = vol.Schema(
+    {
+        "username": str,
+        "password": str,
+        "supplierid": str,
+        "billing_period_skew": bool
+    }
+)
 
 
 async def validate_input(hass: core.HomeAssistant, data):
@@ -51,10 +58,12 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
         errors = {}
+        _LOGGER.debug(f"User_input = {user_input}")
         if user_input is not None:
             try:
                 #info = await validate_input(self.hass, user_input)
                 supplierid = user_input["supplierid"]
+                #billing_period_skew = user_input["billing_period_skew"]
                 info = f"Eforsyning {supplierid}"
                 return self.async_create_entry(title=info, data=user_input)
             except CannotConnect:

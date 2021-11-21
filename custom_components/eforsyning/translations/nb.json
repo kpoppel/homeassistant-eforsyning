@@ -5,7 +5,8 @@
                 "data": {
                     "username": "Brugernavn",
                     "password": "Kodeord",
-                    "supplierid": "Leverandør ID"
+                    "supplierid": "Leverandør ID",
+                    "billing_period_skew": "Afregning Juli til Juni?"
                 },
                 "title": "Angiv brugernavn, kodeord og leverandør ID"
             }
