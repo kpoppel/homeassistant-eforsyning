@@ -20,12 +20,12 @@ async def async_setup_entry(hass, config, async_add_entities):
     
     eforsyning = hass.data[DOMAIN][config.entry_id]
 
-    ## Sensors for
+    ## Sensors far
     # Year, Month, Day? We'll fetch data once per day.
     #   Temp  - forward temperature
     #   Temp  - return temperature
     #   Temp  - Expected return temperature
-    #   Temp  - Measured return temperature
+    #   Temp  - Measured cooling temperature (difference between forward and return temperatures)
     #   ENG1  - Start MWh
     #   ENG1  - End MWh
     #   ENG1  - Consumption MWh
@@ -45,7 +45,7 @@ async def async_setup_entry(hass, config, async_add_entities):
     #   TV2  - Consumption MWh
     # The daily datalog should only be one sensor reading.
     # So
-    temp_series = {"forward", "return", "exp-return", "meas-return"}
+    temp_series = {"forward", "return", "exp-return", "cooling"}
     energy_series = {"start", "end", "used", "exp-used", "exp-end"}
     sensors = []
 
@@ -72,10 +72,8 @@ class EforsyningEnergy(SensorEntity):
         self._data = client
 
         self._attr_name = name
-        #self._name = name
 
         self._sensor_value = f"{sensor_type}-{sensor_point}"
-        #self._unique_id = f"eforsyning-{self._sensor_value}"
         self._attr_unique_id = f"eforsyning-{self._sensor_value}"
         if sensor_type == "energy":
             self._attr_native_unit_of_measurement = ENERGY_MEGA_WATT_HOUR
@@ -83,46 +81,17 @@ class EforsyningEnergy(SensorEntity):
             self._attr_state_class = STATE_CLASS_TOTAL
             self._attr_device_class = DEVICE_CLASS_ENERGY
             self._attr_state_class = STATE_CLASS_TOTAL_INCREASING
-            # Original:
-            #self._unit = ENERGY_MEGA_WATT_HOUR
-            #self._icon = "mdi:lightning-bolt-circle"
         elif sensor_type == "water":
             self._attr_native_unit_of_measurement = VOLUME_CUBIC_METERS
             self._attr_icon = "mdi:water"
             self._attr_state_class = STATE_CLASS_TOTAL
             # Only gas can be measured in m3
             self._attr_device_class = DEVICE_CLASS_GAS
-            # Original:
-            #self._unit = VOLUME_CUBIC_METERS
-            #self._icon = "mdi:water"
         else:
             self._attr_native_unit_of_measurement = TEMP_CELSIUS
             self._attr_icon = "mdi:thermometer"
             self._attr_device_class = DEVICE_CLASS_TEMPERATURE
             self._attr_state_class = STATE_CLASS_MEASUREMENT
-            # Original:
-            #self._unit = TEMP_CELSIUS
-            #self._icon = "mdi:thermometer"
-
-    #@property
-    #def name(self):
-    #    """Return the name of the sensor."""
-    #    return self._name
-
-    #@property
-    #def icon(self):
-    #    return self._icon
-
-    #@property
-    #def unique_id(self):
-    #    """The unique id of the sensor."""
-    #    return self._unique_id
-
-    #@property
-    #def state(self):
-    #    """Return the state of the sensor."""
-    #    # _attr_native_value
-    #    return self._state
 
     @property
     def device_state_attributes(self):
@@ -132,23 +101,15 @@ class EforsyningEnergy(SensorEntity):
         attributes['metering_date'] = self._data_date
         return attributes
 
-    #@property
-    #def unit_of_measurement(self):
-    #    """Return the unit of measurement."""
-    #    _LOGGER.debug(f"My unit is {self._unit}")
-    #    return self._unit
-
     def update(self):
         """Fetch new state data for the sensor.
         This is the only method that should fetch new data for Home Assistant.
         """
         _LOGGER.debug(f"Setting status for {self._attr_name}")
-        #_LOGGER.debug(f"Setting status for {self._name}")
 
         self._data.update()        
 
         self._data_date = self._data.get_data_date()
         self._attr_native_value = self._data.get_data(self._sensor_value)
-        #self._state = self._data.get_data(self._sensor_value)
         _LOGGER.debug(f"Done setting status for {self._attr_name} = {self._attr_native_value} {self._attr_native_unit_of_measurement}")
 

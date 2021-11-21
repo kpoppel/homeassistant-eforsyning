@@ -306,7 +306,7 @@ class Eforsyning:
             metering_data['temp-forward'] = self._stof(fl['Tempfrem'])
             metering_data['temp-return'] = self._stof(fl['TempRetur'])
             metering_data['temp-exp-return'] = self._stof(fl['Forv_Retur'])
-            metering_data['temp-meas-return'] = self._stof(fl['Afkoling'])
+            metering_data['temp-cooling'] = self._stof(fl['Afkoling'])
             for reading in fl['TForbrugsTaellevaerk']:
                 unit = reading['Enhed_Txt']
                 if reading['IndexNavn'] == "ENG1":
@@ -334,7 +334,7 @@ class Eforsyning:
 #        metering_data['temp-forward'] = random.randint(0, 100)
 #        metering_data['temp-return'] = random.randint(0, 100)
 #        metering_data['temp-exp-return'] = random.randint(0, 100)
-#        metering_data['temp-meas-return'] = random.randint(0, 100)
+#        metering_data['temp-cooling'] = random.randint(0, 100)
 #        metering_data['energy-start'] = random.randint(0, 100)
 #        metering_data['energy-end'] = random.randint(0, 100)
 #        metering_data['energy-used'] = random.randint(0, 100)
