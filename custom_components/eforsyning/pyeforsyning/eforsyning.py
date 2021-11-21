@@ -267,7 +267,7 @@ class Eforsyning:
             year = year - 1
 
         raw_data = self._get_time_series(year=year,
-                                        #day=True, # TODO: Lets just see if pulling year data does not update daily.
+                                         day=True, # NOTE: Pulling daily data is required to get accurate temperature measurements
                                          from_date=datetime.now()-timedelta(days=1),
                                          to_date=datetime.now())
 
