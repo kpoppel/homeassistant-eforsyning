@@ -1,7 +1,11 @@
 """Platform for Eforsyning sensor integration."""
 import logging
-from homeassistant.const import TEMP_CELSIUS
-from homeassistant.helpers.entity import Entity
+from homeassistant.const import (TEMP_CELSIUS, STATE_CLASS_TOTAL_INCREASING,
+                                 DEVICE_CLASS_ENERGY, DEVICE_CLASS_TEMPERATURE,
+                                 DEVICE_CLASS_GAS,
+                                 ENERGY_MEGA_WATT_HOUR, VOLUME_CUBIC_METERS)
+from homeassistant.components.sensor import (SensorEntity, STATE_CLASS_MEASUREMENT, STATE_CLASS_TOTAL)
+#from homeassistant.helpers.entity import Entity
 from custom_components.eforsyning.pyeforsyning.eforsyning import Eforsyning
 from custom_components.eforsyning.pyeforsyning.models import TimeSeries
 
@@ -57,7 +61,7 @@ async def async_setup_entry(hass, config, async_add_entities):
     async_add_entities(sensors)
 
 
-class EforsyningEnergy(Entity):
+class EforsyningEnergy(SensorEntity):
     """Representation of a Sensor."""
 
     def __init__(self, name, sensor_point, sensor_type, client):
@@ -65,38 +69,59 @@ class EforsyningEnergy(Entity):
         self._state = None
         self._data_date = None
         self._data = client
-        self._name = name
+
+        self._attr_name = name
+        #self._name = name
+
         self._sensor_value = f"{sensor_type}-{sensor_point}"
-        self._unique_id = f"eforsyning-{self._sensor_value}"
+        #self._unique_id = f"eforsyning-{self._sensor_value}"
+        self._attr_unique_id = f"eforsyning-{self._sensor_value}"
         if sensor_type == "energy":
-            self._unit = "MWh"
-            self._icon = "mdi:flash-circle"
+            self._attr_native_unit_of_measurement = ENERGY_MEGA_WATT_HOUR
+            self._attr_icon = "mdi:lightning-bolt-circle"
+            self._attr_state_class = STATE_CLASS_TOTAL
+            self._attr_device_class = DEVICE_CLASS_ENERGY
+            self._attr_state_class = STATE_CLASS_TOTAL_INCREASING
+            # Original:
+            #self._unit = ENERGY_MEGA_WATT_HOUR
+            #self._icon = "mdi:lightning-bolt-circle"
         elif sensor_type == "water":
-            self._unit = "m³"
-            self._icon = "mdi:water"
+            self._attr_native_unit_of_measurement = VOLUME_CUBIC_METERS
+            self._attr_icon = "mdi:water"
+            self._attr_state_class = STATE_CLASS_TOTAL
+            # Only gas can be measured in m3
+            self._attr_device_class = DEVICE_CLASS_GAS
+            # Original:
+            #self._unit = VOLUME_CUBIC_METERS
+            #self._icon = "mdi:water"
         else:
-            self._unit = TEMP_CELSIUS
-            self._icon = "mdi:thermometer"
+            self._attr_native_unit_of_measurement = TEMP_CELSIUS
+            self._attr_icon = "mdi:thermometer"
+            self._attr_device_class = DEVICE_CLASS_TEMPERATURE
+            self._attr_state_class = STATE_CLASS_MEASUREMENT
+            # Original:
+            #self._unit = TEMP_CELSIUS
+            #self._icon = "mdi:thermometer"
 
+    #@property
+    #def name(self):
+    #    """Return the name of the sensor."""
+    #    return self._name
 
-    @property
-    def name(self):
-        """Return the name of the sensor."""
-        return self._name
+    #@property
+    #def icon(self):
+    #    return self._icon
 
-    @property
-    def icon(self):
-        return self._icon
+    #@property
+    #def unique_id(self):
+    #    """The unique id of the sensor."""
+    #    return self._unique_id
 
-    @property
-    def unique_id(self):
-        """The unique id of the sensor."""
-        return self._unique_id
-
-    @property
-    def state(self):
-        """Return the state of the sensor."""
-        return self._state
+    #@property
+    #def state(self):
+    #    """Return the state of the sensor."""
+    #    # _attr_native_value
+    #    return self._state
 
     @property
     def device_state_attributes(self):
@@ -106,11 +131,11 @@ class EforsyningEnergy(Entity):
         attributes['metering_date'] = self._data_date
         return attributes
 
-    @property
-    def unit_of_measurement(self):
-        """Return the unit of measurement."""
-        _LOGGER.debug("My unit is")
-        return self._unit
+    #@property
+    #def unit_of_measurement(self):
+    #    """Return the unit of measurement."""
+    #    _LOGGER.debug(f"My unit is {self._unit}")
+    #    return self._unit
 
     def update(self):
         """Fetch new state data for the sensor.
@@ -121,6 +146,7 @@ class EforsyningEnergy(Entity):
         self._data.update()        
 
         self._data_date = self._data.get_data_date()
-        self._state = self._data.get_data(self._sensor_value)
+        self._attr_native_value = self._data.get_data(self._sensor_value)
+        #self._state = self._data.get_data(self._sensor_value)
         _LOGGER.debug(f"Done updating data")
 
