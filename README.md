@@ -60,7 +60,7 @@ The names are hopefully self-explanatory:
 * water_exp_used
 * water_temperature_return
 * water_exp_temperature_return
-* water_temperature_meas_return
+* water_temperature_cooling
 * water_temperature_forward
 
 ## Debugging
