@@ -94,10 +94,9 @@ class EforsyningEnergy(SensorEntity):
         if sensor_type == "energy":
             self._attr_native_unit_of_measurement = ENERGY_KILO_WATT_HOUR
             self._attr_icon = "mdi:lightning-bolt-circle"
-            self._attr_state_class = STATE_CLASS_TOTAL
             self._attr_device_class = DEVICE_CLASS_ENERGY
-            self._attr_state_class = STATE_CLASS_MEASUREMENT #STATE_CLASS_TOTAL_INCREASING
-            self._attr_last_reset = datetime.datetime(2000, 1, 1, 0, 0, 0) #JSON: "2000-01-01T00:00:00"
+            self._attr_state_class = STATE_CLASS_MEASUREMENT #STATE_CLASS_TOTAL_INCREASING or STATE_CLASS_TOTAL
+            #self._attr_last_reset = datetime.datetime(2000, 1, 1, 0, 0, 0) #JSON: "2000-01-01T00:00:00"
         elif sensor_type == "water":
             self._attr_native_unit_of_measurement = VOLUME_CUBIC_METERS
             self._attr_icon = "mdi:water"
