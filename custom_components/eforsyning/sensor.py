@@ -3,7 +3,7 @@ import logging
 from homeassistant.const import (TEMP_CELSIUS,
                                  DEVICE_CLASS_ENERGY, DEVICE_CLASS_TEMPERATURE,
                                  DEVICE_CLASS_GAS,
-                                 ENERGY_MEGA_WATT_HOUR, VOLUME_CUBIC_METERS)
+                                 ENERGY_KILO_WATT_HOUR, VOLUME_CUBIC_METERS)
 from homeassistant.components.sensor import (SensorEntity, STATE_CLASS_MEASUREMENT, STATE_CLASS_TOTAL,
                                             STATE_CLASS_TOTAL_INCREASING)
 #from homeassistant.helpers.entity import Entity
@@ -91,7 +91,7 @@ class EforsyningEnergy(SensorEntity):
         self._sensor_value = f"{sensor_type}-{sensor_point}"
         self._attr_unique_id = f"eforsyning-{self._sensor_value}"
         if sensor_type == "energy":
-            self._attr_native_unit_of_measurement = ENERGY_MEGA_WATT_HOUR
+            self._attr_native_unit_of_measurement = ENERGY_KILO_WATT_HOUR
             self._attr_icon = "mdi:lightning-bolt-circle"
             self._attr_state_class = STATE_CLASS_TOTAL
             self._attr_device_class = DEVICE_CLASS_ENERGY
