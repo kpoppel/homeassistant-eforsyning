@@ -35,13 +35,14 @@ This part is a little tricky, but hang on:
   3. Visit the main page for [eforsyning](https://eforsyning.dk).
   4. If you are redirected to the login site of your regional supplier, click the small
       link "change supplier" (skift forsyning) to clear that cookie and go back.
-  5. Press F12 in your browser (chrome at least) to get the developer tools.
-     Select the "Network" tab and type "get" in the search field.
-  6. On the web page you must find your supplier, and click it.  You are redirected to the
+  5. On the web page you must find your supplier, and click it.  You are redirected to the
      login page for your supplier.
-  7. In the Network traffic you should see a single line like this:
+  6. Press F12 in your browser (chrome at least) to get the developer tools.
+     Select the "Network" tab and type "getv" in the search field.
+  7. Use your username and login credentials to login.
+  8. In the Network traffic you should see a single line like this:
      `https://<SUPPLIER URL>/umbraco/dff/dffapi/GetVaerkSettings?forsyningid=<SUPPLIER ID (lots of digits and letters)>`
-  8. Copy these numbers and letters into Home Assistant, and you should be ready to go.
+  9. Copy these numbers and letters into Home Assistant along with your user name and password, and you should be ready to go.
 
 ## State and attributes
 ---
@@ -60,7 +61,7 @@ The names are hopefully self-explanatory:
 * water_exp_used
 * water_temperature_return
 * water_exp_temperature_return
-* water_temperature_meas_return
+* water_temperature_cooling
 * water_temperature_forward
 
 ## Debugging
