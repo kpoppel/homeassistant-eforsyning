@@ -309,11 +309,11 @@ class Eforsyning:
             metering_data['temp-cooling'] = self._stof(fl['Afkoling'])
             for reading in fl['TForbrugsTaellevaerk']:
                 unit = reading['Enhed_Txt']
-                _LOGGER.debug(f"Energy use unit is: {unit}")
-                multiplier = 1
-                if unit == "MWh":
-                    multiplier = 1000
                 if reading['IndexNavn'] == "ENG1":
+                    #_LOGGER.debug(f"Energy use unit is: {unit}")
+                    multiplier = 1
+                    if unit == "MWh":
+                        multiplier = 1000
                     metering_data['energy-start'] = self._stof(reading['Start']) * multiplier
                     metering_data['energy-end'] = self._stof(reading['Slut']) * multiplier
                     metering_data['energy-used'] = self._stof(reading['Forbrug']) * multiplier
