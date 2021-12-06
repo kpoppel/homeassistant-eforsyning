@@ -20,30 +20,37 @@ async def async_setup_entry(hass, config, async_add_entities):
     
     eforsyning = hass.data[DOMAIN][config.entry_id]
 
-    ## Sensors far
+    ## Sensors so far
     # Year, Month, Day? We'll fetch data once per day.
     # NOTE: Measurement type?
     #   measurement     : The current value, right now.
     #   total           : accumulated in/de-crease of a value. The absolute value is not interesting
+    #                     Can be "manually" reset using "last_reset".  Maybe this is useful here along with
+    #                     the billing period.
     #   total_increasing: accumulated monotonically increasing value. The absolute value is not interesting
+    #                     Also a decreasing value automatically becomes a signal that a new metering cycle has begun.
     # So, for a statistic where the daily, montly or yearly spend is more important than knowing the absolute value
     # then total or total_increasing is good for this.
     # For now well make all of it "measurement", and see how that goes.
     #
-    #   Temp  - forward temperature
-    #   Temp  - return temperature
-    #   Temp  - Expected return temperature
-    #   Temp  - Measured cooling temperature (difference between forward and return temperatures)
-    #   ENG1  - Start MWh
-    #   ENG1  - End MWh
-    #   ENG1  - Consumption MWh
-    #   ENG1  - Expected consumption MWh
-    #   ENG1  - Expected End MWh
-    #   Water - Start M3
-    #   Water - End M3
-    #   Water - Consumption M3
-    #   Water - Expected consumption M3
-    #   Water - Expected End M3
+    # As the data looks like, the metering data never resets, warranting a "total" + "last_reset" method on the billing date.
+    # Using this type makes it possible to follow the use of water and energy rather than the total meter value.
+    # Perhaps just make another sensor with this property, so both absolute and aggregated is available (if the other data is not stored)
+    #
+    #   Temp  - forward temperature (actual measurement)
+    #   Temp  - return temperature (actual measurement)
+    #   Temp  - Expected return temperature (forecast actual measurement)
+    #   Temp  - Measured cooling temperature (difference between forward and return temperatures) (calculation of actual)
+    #   ENG1  - Start MWh (absolute)
+    #   ENG1  - End MWh (absolute)
+    #   ENG1  - Consumption MWh (positive increase)
+    #   ENG1  - Expected consumption MWh (forecast positive increase)
+    #   ENG1  - Expected End MWh (forecast of absolute)
+    #   Water - Start M3 (absolute)
+    #   Water - End M3 (asolute)
+    #   Water - Consumption M3 (positive increase)
+    #   Water - Expected consumption M3 (forecast positive increase)
+    #   Water - Expected End M3 (forecast absolute)
     # Extra data (don't know what this is):
     #   ENG2  - Start MWh
     #   ENG2  - End MWh
@@ -52,7 +59,7 @@ async def async_setup_entry(hass, config, async_add_entities):
     #   TV2  - End MWh
     #   TV2  - Consumption MWh
     # The daily datalog should only be one sensor reading.
-    # So
+    #
     temp_series = {"forward", "return", "exp-return", "cooling"}
     energy_series = {"start", "end", "used", "exp-used", "exp-end"}
     sensors = []
@@ -102,8 +109,8 @@ class EforsyningEnergy(SensorEntity):
             self._attr_state_class = STATE_CLASS_MEASUREMENT
 
     @property
-    def device_state_attributes(self):
-        """Return state attributes."""
+    def extra_state_attributes(self):
+        """Return extra state attributes."""
         attributes = dict()
         attributes['Metering date'] = self._data_date
         attributes['metering_date'] = self._data_date
