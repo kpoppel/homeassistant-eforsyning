@@ -1,5 +1,6 @@
 """Platform for Eforsyning sensor integration."""
 import logging
+import datetime
 from homeassistant.const import (TEMP_CELSIUS,
                                  DEVICE_CLASS_ENERGY, DEVICE_CLASS_TEMPERATURE,
                                  DEVICE_CLASS_GAS,
@@ -90,13 +91,13 @@ class EforsyningEnergy(SensorEntity):
 
         self._sensor_value = f"{sensor_type}-{sensor_point}"
         self._attr_unique_id = f"eforsyning-{self._sensor_value}"
-        self._attr_last_reset = "2000-01-01T00:00:00"
         if sensor_type == "energy":
             self._attr_native_unit_of_measurement = ENERGY_KILO_WATT_HOUR
             self._attr_icon = "mdi:lightning-bolt-circle"
             self._attr_state_class = STATE_CLASS_TOTAL
             self._attr_device_class = DEVICE_CLASS_ENERGY
             self._attr_state_class = STATE_CLASS_MEASUREMENT #STATE_CLASS_TOTAL_INCREASING
+            self._attr_last_reset = datetime.datetime(2000, 1, 1, 0, 0, 0) #JSON: "2000-01-01T00:00:00"
         elif sensor_type == "water":
             self._attr_native_unit_of_measurement = VOLUME_CUBIC_METERS
             self._attr_icon = "mdi:water"
