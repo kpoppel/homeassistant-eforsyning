@@ -90,6 +90,7 @@ class EforsyningEnergy(SensorEntity):
 
         self._sensor_value = f"{sensor_type}-{sensor_point}"
         self._attr_unique_id = f"eforsyning-{self._sensor_value}"
+        self._attr_last_reset = None
         if sensor_type == "energy":
             self._attr_native_unit_of_measurement = ENERGY_KILO_WATT_HOUR
             self._attr_icon = "mdi:lightning-bolt-circle"
