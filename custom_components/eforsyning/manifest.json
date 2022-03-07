@@ -6,7 +6,7 @@
   "documentation": "https://www.home-assistant.io/integrations/eforsyning",
   "issue_tracker": "https://github.com/kpoppel/homeassistant-eforsyning/issues",
   "requirements": [
-    "requests==2.22.0"
+    "requests==2.27.1"
   ],
   "ssdp": [],
   "zeroconf": [],
