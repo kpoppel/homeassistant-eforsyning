@@ -1,7 +1,7 @@
 {
   "domain": "eforsyning",
   "name": "EForsyning",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "config_flow": true,
   "documentation": "https://www.home-assistant.io/integrations/eforsyning",
   "issue_tracker": "https://github.com/kpoppel/homeassistant-eforsyning/issues",
