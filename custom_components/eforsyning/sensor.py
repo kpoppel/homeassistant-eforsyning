@@ -69,7 +69,7 @@ async def async_setup_entry(hass, config, async_add_entities):
     temp_series = {"forward", "return", "exp-return", "cooling"}
     energy_series = {"start", "end", "used", "exp-used", "exp-end"}
     sensors = []
-    unique_id = uuid.uuid3(uuid.NAMESPACE_URL, f"{config.data['username']}-{config.data['supplierid']}")
+    unique_id = "eforsyning-" + str(uuid.uuid3(uuid.NAMESPACE_URL, f"{config.data['username']}-{config.data['supplierid']}"))
 
     # It is recommended to use a truly unique ID when setting up sensors.  This one uses the entry_id because one could have
     # several accounts at the same supplier.  Also possible is to to use e.g. username+supplierid, but that gets kind of long.
