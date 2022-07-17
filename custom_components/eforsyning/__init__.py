@@ -1,76 +1,77 @@
 """The Eforsyning integration."""
-import asyncio
-import logging
-import sys
+from __future__ import annotations
 
 import voluptuous as vol
-from homeassistant.util import Throttle
-from datetime import timedelta
 
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
 from custom_components.eforsyning.pyeforsyning.eforsyning import Eforsyning
 
-from .const import DOMAIN
-
+from homeassistant.util import Throttle
+import asyncio
+import logging
+import sys
 import requests
 
-_LOGGER = logging.getLogger(__name__)
-
+from .const import DOMAIN, MIN_TIME_BETWEEN_UPDATES
 
 CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
 
-PLATFORMS = ["sensor"]
+PLATFORMS: list[Platform] = [Platform.SENSOR]
 
-# Every 6 hours seems appropriate to get an update ready in the morning
-MIN_TIME_BETWEEN_UPDATES = timedelta(hours=6)
-# Sure, let's bash the API service.. But useful when trying to get results fast.
-#MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=1)
+_LOGGER = logging.getLogger(__name__)
 
-
-async def async_setup(hass: HomeAssistant, config: dict):
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Eforsyning component."""
     hass.data[DOMAIN] = {}
     return True
 
-
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Eforsyning from a config entry."""
+    #_LOGGER.debug(entry.data)
     username = entry.data['username']
     password = entry.data['password']
     supplierid = entry.data['supplierid']
+    entityname = entry.data['entityname']
     billing_period_skew = entry.data['billing_period_skew'] # This one is true if the billing period is from July to June
     
-    hass.data[DOMAIN][entry.entry_id] = HassEforsyning(username, password, supplierid, billing_period_skew)
+    hass.data[DOMAIN][entry.entry_id] = API(username, password, supplierid, entityname, billing_period_skew)
 
-    for component in PLATFORMS:
-        hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(entry, component)
-        )
+    hass.config_entries.async_setup_platforms(entry, PLATFORMS)
 
     return True
 
-
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = all(
-        await asyncio.gather(
-            *[
-                hass.config_entries.async_forward_entry_unload(entry, component)
-                for component in PLATFORMS
-            ]
-        )
-    )
-    if unload_ok:
+    if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         hass.data[DOMAIN].pop(entry.entry_id)
 
     return unload_ok
 
-class HassEforsyning:
-    def __init__(self, username, password, supplierid, billing_period_skew):
-        self._client = Eforsyning(username, password, supplierid, billing_period_skew)
+async def async_migrate_entry(hass, config_entry: ConfigEntry):
+    """Handle migration of setup entry data from one version to the next."""
+    _LOGGER.debug("Migrating from version %s", config_entry.version)
 
+    if config_entry.version == 1:
+
+        new = {**config_entry.data}
+        # Data:
+        # {'supplierid': '...', 'password': '...', 'username': '...', 'billing_period_skew': <False or True>}
+        new['entityname'] = "eforsyning"
+
+        config_entry.version = 2
+        hass.config_entries.async_update_entry(config_entry, data=new)
+
+        _LOGGER.info("Migration to version %s successful", config_entry.version)
+
+    return True
+
+""" API for EForsyning.  Because of the @Throttle annotation it cannot live in the eforsyning module - but it should."""
+class API:
+    def __init__(self, username, password, supplierid, entityname, billing_period_skew):
+        self._client = Eforsyning(username, password, supplierid, billing_period_skew)
         self._data = None
 
     def get_data(self, data_point):

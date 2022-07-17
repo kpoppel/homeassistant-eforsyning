@@ -21,6 +21,9 @@ async def async_setup_entry(hass, config, async_add_entities):
     
     eforsyning = hass.data[DOMAIN][config.entry_id]
 
+    # What data is available here:
+    #_LOGGER.fatal(f"Config: {config.as_dict()}")
+    
     ## Sensors so far
     # Year, Month, Day? We'll fetch data once per day.
     # NOTE: Measurement type?
@@ -65,23 +68,24 @@ async def async_setup_entry(hass, config, async_add_entities):
     energy_series = {"start", "end", "used", "exp-used", "exp-end"}
     sensors = []
 
+    # It is recommended to use a truly unique ID when setting up sensors.  This one uses the entry_id because one could have
+    # several accounts at the same supplier.  Also possible is to to use e.g. username+supplierid, but that gets kind of long.
     for s in temp_series:
-        sensors.append(EforsyningEnergy(f"Eforsyning Water Temperature {s}", s, "temp", eforsyning))
+        sensors.append(EforsyningEnergy(f"{config.data['entityname']} Water Temperature {s}", "temp", s, config.entry_id, eforsyning))
 
     for s in energy_series:
-        sensors.append(EforsyningEnergy(f"Eforsyning Energy {s}", s, "energy", eforsyning))
+        sensors.append(EforsyningEnergy(f"{config.data['entityname']} Energy {s}", "energy", s, config.entry_id, eforsyning))
 
     for s in energy_series:
-        sensors.append(EforsyningEnergy(f"Eforsyning Water {s}", s, "water", eforsyning))
+        sensors.append(EforsyningEnergy(f"{config.data['entityname']} Water {s}", "water", s, config.entry_id, eforsyning))
 
-    #sensors.append(EforsyningEnergy("", "", eforsyning))
     async_add_entities(sensors)
 
 
 class EforsyningEnergy(SensorEntity):
     """Representation of a Sensor."""
 
-    def __init__(self, name, sensor_point, sensor_type, client):
+    def __init__(self, name, sensor_type, sensor_point, unique_id, client):
         """Initialize the sensor."""
         self._state = None
         self._data_date = None
@@ -90,7 +94,7 @@ class EforsyningEnergy(SensorEntity):
         self._attr_name = name
 
         self._sensor_value = f"{sensor_type}-{sensor_point}"
-        self._attr_unique_id = f"eforsyning-{self._sensor_value}"
+        self._attr_unique_id = f"{unique_id}-{self._sensor_value}"  #<-- TODO: change name if multiple instances loaded
         if sensor_type == "energy":
             self._attr_native_unit_of_measurement = ENERGY_KILO_WATT_HOUR
             self._attr_icon = "mdi:lightning-bolt-circle"

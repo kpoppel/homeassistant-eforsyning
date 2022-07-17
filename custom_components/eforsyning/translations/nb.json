@@ -5,8 +5,9 @@
                 "data": {
                     "username": "Brugernavn",
                     "password": "Kodeord",
-                    "supplierid": "Leverandør ID",
-                    "billing_period_skew": "Afregning Juli til Juni?"
+                    "supplierid": "Leverandør ID (11111111-1111-1111-1111-111111111111)",
+                    "billing_period_skew": "Afregning Juli til Juni?",
+                    "entityname": "Valgfri - sæt entity navn præfiks (hvis du har flere målere)"
                 },
                 "title": "Angiv brugernavn, kodeord og leverandør ID"
             }
