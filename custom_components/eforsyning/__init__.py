@@ -90,7 +90,12 @@ class API:
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     def update(self):
         _LOGGER.debug("Fetching data from Eforsyning")
- 
+        # When asked to help with some debug data - and extra noise
+        # Remove the comment from this line, and comment out the rest of the
+        # lines down to the last line
+        #self._data = self._client.get_latest()
+
+        # From here -->
         try: 
             data = self._client.get_latest()
             if data.status == 200:
@@ -108,6 +113,6 @@ class API:
         except: 
             e = sys.exc_info()[0]
             _LOGGER.warn(f"Exception: {e}")
-
+        # <-- To here
         _LOGGER.debug("Done fetching data from Eforsyning")
 

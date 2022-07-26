@@ -285,11 +285,15 @@ class Eforsyning:
         else:
             result = TimeSeries(raw_data.status, None, None, raw_data.body)
 
-        _LOGGER.debug(f"Done getting latest data")
+        _LOGGER.debug("Done getting latest data (status code:%d)", raw_data.status)
         return result
 
     def _stof(self, fstr):
-        """Convert string with ',' string float to float"""
+        """Convert string with ',' string float to float.
+           If the string is empty just return 0.0.
+        """
+        if fstr == "":
+            return 0.0
         return float(fstr.replace(',', '.'))
 
     def _parse_result(self, result):

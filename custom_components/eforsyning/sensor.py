@@ -120,7 +120,6 @@ class EforsyningEnergy(SensorEntity):
     def extra_state_attributes(self):
         """Return extra state attributes."""
         attributes = dict()
-        attributes['Metering date'] = self._data_date
         attributes['metering_date'] = self._data_date
         return attributes
 
@@ -128,7 +127,7 @@ class EforsyningEnergy(SensorEntity):
         """Fetch new state data for the sensor.
         This is the only method that should fetch new data for Home Assistant.
         """
-        _LOGGER.debug(f"Setting status for {self._attr_name}")
+        _LOGGER.debug("Setting status for %s", self._attr_name)
 
         self._data.update()        
 
