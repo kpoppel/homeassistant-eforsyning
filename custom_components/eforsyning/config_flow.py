@@ -24,7 +24,8 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required("password") : str,
         vol.Required("supplierid") : str,
         vol.Optional("entityname", default='EForsyning') : str,
-        vol.Required("billing_period_skew", default=False) : bool
+        vol.Required("billing_period_skew", default=False) : bool,
+        vol.Required("is_water_supply", default=False) : bool
     }
 )
 
@@ -73,7 +74,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Eforsyning."""
 
-    VERSION = 2
+    VERSION = 3
     
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 

@@ -26,7 +26,7 @@ async def async_setup_entry(hass, config, async_add_entities):
     # What data is available here:
     #_LOGGER.fatal(f"Config: {config.as_dict()}")
     
-    ## Sensors so far
+    ## Sensors so far for regional heating data:
     # Year, Month, Day? We'll fetch data once per day.
     # NOTE: Measurement type?
     #   measurement     : The current value, right now.
@@ -66,21 +66,45 @@ async def async_setup_entry(hass, config, async_add_entities):
     #   TV2  - Consumption MWh
     # The daily datalog should only be one sensor reading.
     #
-    temp_series = {"forward", "return", "exp-return", "cooling"}
-    energy_series = {"start", "end", "used", "exp-used", "exp-end"}
+    #
+    # For Water metering a different set of sensors are necessary:
+    #
+    #   Water - Start M3 (absolute)
+    #   Water - End M3 (absolute)
+    #   Water - Consumption M3 (positive increase)
+    #   Water - Expected End M3 (forecast absolute)
+    #   Water - Total consumption M3 since last billing period (positive increase)
+    #   Water - Expected Full Year End Total M3 (forecast positive increase)
+    #   Water - Expected Year To Date consumption (positive increase) - This one needs to be calculated from the data.
+    #
+    # In the JSON these are the data points:
+    #   ForbrugsLinjer.TForbrugsLinje[last].TForbrugsTaellevaerk[0].Slut|Start|Forbrug
+    #   ForbrugsLinjer.TForbrugsLinje[last].ForventetAflaesningM3|ForventetForbrugM3
+    #   IaltLinje.TForbrugsTaellevaerk[0].Forbrug
+    #   IaltLinje.ForventetForbrugM3
+    #   ForbrugsLinjer.TForbrugsLinje[last].ForventetAflaesningM3 - ForbrugsLinjer.TForbrugsLinje[0].ForventetAflaesningM3
+
     sensors = []
     unique_id = "eforsyning-" + str(uuid.uuid3(uuid.NAMESPACE_URL, f"{config.data['username']}-{config.data['supplierid']}"))
+    if(config.data['is_water_supply']):
+        water_series = {"start", "end", "used", "exp-used", "exp-end", "ytd-used", "exp-ytd-used", "exp-fy-used"}
 
-    # It is recommended to use a truly unique ID when setting up sensors.  This one uses the entry_id because one could have
-    # several accounts at the same supplier.  Also possible is to to use e.g. username+supplierid, but that gets kind of long.
-    for s in temp_series:
-        sensors.append(EforsyningEnergy(f"{config.data['entityname']} Water Temperature {s}", "temp", s, unique_id, eforsyning))
+        for s in water_series:
+            sensors.append(EforsyningEnergy(f"{config.data['entityname']} Water {s}", "water", s, unique_id, eforsyning))
+    else:
+        temp_series = {"forward", "return", "exp-return", "cooling"}
+        energy_series = {"start", "end", "used", "exp-used", "exp-end"}
 
-    for s in energy_series:
-        sensors.append(EforsyningEnergy(f"{config.data['entityname']} Energy {s}", "energy", s, unique_id, eforsyning))
+        # It is recommended to use a truly unique ID when setting up sensors.  This one uses the entry_id because one could have
+        # several accounts at the same supplier.  Also possible is to to use e.g. username+supplierid, but that gets kind of long.
+        for s in temp_series:
+            sensors.append(EforsyningEnergy(f"{config.data['entityname']} Water Temperature {s}", "temp", s, unique_id, eforsyning))
 
-    for s in energy_series:
-        sensors.append(EforsyningEnergy(f"{config.data['entityname']} Water {s}", "water", s, unique_id, eforsyning))
+        for s in energy_series:
+            sensors.append(EforsyningEnergy(f"{config.data['entityname']} Energy {s}", "energy", s, unique_id, eforsyning))
+
+        for s in energy_series:
+            sensors.append(EforsyningEnergy(f"{config.data['entityname']} Water {s}", "water", s, unique_id, eforsyning))
 
     async_add_entities(sensors)
 

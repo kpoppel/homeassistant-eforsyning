@@ -31,13 +31,15 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Eforsyning from a config entry."""
     #_LOGGER.debug(entry.data)
+    _LOGGER.debug("async_setup_entry, %s", entry.domain)
     username = entry.data['username']
     password = entry.data['password']
     supplierid = entry.data['supplierid']
     entityname = entry.data['entityname']
     billing_period_skew = entry.data['billing_period_skew'] # This one is true if the billing period is from July to June
+    is_water_supply = entry.data['is_water_supply'] # This one is true if the module is for eforsyning water delivery (false for regional heating)
     
-    hass.data[DOMAIN][entry.entry_id] = API(username, password, supplierid, entityname, billing_period_skew)
+    hass.data[DOMAIN][entry.entry_id] = API(username, password, supplierid, entityname, billing_period_skew, is_water_supply)
 
     hass.config_entries.async_setup_platforms(entry, PLATFORMS)
 
@@ -50,7 +52,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     return unload_ok
 
-async def async_migrate_entry(hass, config_entry: ConfigEntry):
+async def async_migrate_entry(hass, config_entry: ConfigEntry) -> bool:
     """Handle migration of setup entry data from one version to the next."""
     _LOGGER.debug("Migrating from version %s", config_entry.version)
 
@@ -66,12 +68,23 @@ async def async_migrate_entry(hass, config_entry: ConfigEntry):
 
         _LOGGER.info("Migration to version %s successful", config_entry.version)
 
+    if config_entry.version == 2:
+        new = {**config_entry.data}
+        # Data:
+        # {'supplierid': '...', 'password': '...', 'username': '...', 'billing_period_skew': <False or True>, entityname = eforsyning}
+        new['is_water_supply'] = False
+
+        config_entry.version = 3
+        hass.config_entries.async_update_entry(config_entry, data=new)
+
+        _LOGGER.info("Migration to version %s successful", config_entry.version)
+
     return True
 
 """ API for EForsyning.  Because of the @Throttle annotation it cannot live in the eforsyning module - but it should."""
 class API:
-    def __init__(self, username, password, supplierid, entityname, billing_period_skew):
-        self._client = Eforsyning(username, password, supplierid, billing_period_skew)
+    def __init__(self, username, password, supplierid, entityname, billing_period_skew, is_water_supply):
+        self._client = Eforsyning(username, password, supplierid, billing_period_skew, is_water_supply)
         self._data = None
 
     def get_data(self, data_point):

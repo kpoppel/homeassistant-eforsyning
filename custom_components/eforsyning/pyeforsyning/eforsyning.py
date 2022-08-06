@@ -19,11 +19,12 @@ class Eforsyning:
     '''
     Primary exported interface for eforsyning.dk API wrapper.
     '''
-    def __init__(self, username, password, supplierid, billing_period_skew):
+    def __init__(self, username, password, supplierid, billing_period_skew, is_water_supply):
         self._username = username
         self._password = password
         self._supplierid = supplierid
         self._billing_period_skew = billing_period_skew
+        self._is_water_supply = is_water_supply
         self._base_url = 'https://eforsyning.dk/'
         self._api_server = ""
         ## Assume people only have a single metering device.
@@ -274,7 +275,10 @@ class Eforsyning:
         if raw_data.status == 200:
             json_response = json.loads(raw_data.body)
 
-            r = self._parse_result(json_response)
+            if self._is_water_supply == False:
+                r = self._parse_result_heating(json_response)
+            else:
+                r = self._parse_result_water(json_response)
 
             keys = list(r.keys())
 
@@ -296,11 +300,11 @@ class Eforsyning:
             return 0.0
         return float(fstr.replace(',', '.'))
 
-    def _parse_result(self, result):
+    def _parse_result_heating(self, result):
         '''
         Parse result from API call. This is a JSON dict.
         '''
-        _LOGGER.debug(f"Parsing results")
+        _LOGGER.debug(f"Parsing results - heating metering")
         parsed_result = {}
 
         metering_data = {}
@@ -354,6 +358,48 @@ class Eforsyning:
 #        metering_data['water-exp-used'] = random.randint(0, 100)
 #        metering_data['water-exp-end'] = random.randint(0, 100)
 #        date = datetime.strptime("2020-01-28T14:45:12Z", '%Y-%m-%dT%H:%M:%SZ')
+
+        time_series = TimeSeries(200, date, metering_data)
+        parsed_result[date] = time_series
+        _LOGGER.debug(f"Done parsing results")
+        return parsed_result
+
+    def _parse_result_water(self, result):
+        '''
+        Parse result from API call. This is a JSON dict.
+        In the JSON these are the data points:
+          ForbrugsLinjer.TForbrugsLinje[last].TForbrugsTaellevaerk[0].Slut|Start|Forbrug  (water-start, water-end, water-used)
+          ForbrugsLinjer.TForbrugsLinje[last].ForventetAflaesningM3|ForventetForbrugM3 (water-exp-end, water-exp-used)
+          IaltLinje.TForbrugsTaellevaerk[0].Forbrug (water-ytd-used)
+          IaltLinje.ForventetForbrugM3 (water-exp-fy-used)
+          ForbrugsLinjer.TForbrugsLinje[last].ForventetAflaesningM3 - ForbrugsLinjer.TForbrugsLinje[0].ForventetAflaesningM3 (water-exp-ytd-used)
+
+        '''
+        _LOGGER.debug(f"Parsing results - water metering")
+        parsed_result = {}
+
+        metering_data = {}
+        metering_data['year_start'] = result['AarStart']
+        metering_data['year_end']   = result['AarSlut']
+        # Obviously this results in only the last entry of the last metering device to be saved...
+        for fl in result['ForbrugsLinjer']['TForbrugsLinje']:
+            for reading in fl['TForbrugsTaellevaerk']:
+                metering_data['water-start'] = self._stof(reading['Start'])
+                metering_data['water-end'] = self._stof(reading['Slut'])
+                metering_data['water-used'] = self._stof(reading['Forbrug'])
+            metering_data['water-exp-used'] = self._stof(fl['ForventetForbrugM3'])
+            metering_data['water-exp-end'] = self._stof(fl['ForventetAflaesningM3'])
+
+        metering_data['water-ytd-used'] = self._stof(result['IaltLinje']['TForbrugsTaellevaerk'][0]['Forbrug'])
+        metering_data['water-exp-fy-used'] = self._stof(result['IaltLinje']['ForventetForbrugM3'])
+        # Calculate expected year to date consumption
+        start = self._stof(result['ForbrugsLinjer']['TForbrugsLinje'][0]['ForventetAflaesningM3'])
+        end = self._stof(result['ForbrugsLinjer']['TForbrugsLinje'][-1]['ForventetAflaesningM3'])
+        metering_data['water-exp-ytd-used'] = end - start
+
+        # Because we are fetching data from the full year (or so far)
+        # The date is generated internally to be todays day of course.
+        date = datetime.now()
 
         time_series = TimeSeries(200, date, metering_data)
         parsed_result[date] = time_series

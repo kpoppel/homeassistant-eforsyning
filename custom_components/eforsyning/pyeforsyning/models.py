@@ -45,7 +45,7 @@ class TimeSeries:
         return self._data_date
     
     def get_data_point(self, data_point):
-        """ Legal data points to ask for are:
+        """ Legal data points to ask for (for regional heating) are:
                 ['temp-forward']
                 ['temp-return']
                 ['temp-exp-return']
@@ -60,5 +60,14 @@ class TimeSeries:
                 ['water-used']
                 ['water-exp-used']
                 ['water-exp-end']
+
+            For water metering:
+                ['water-start']
+                ['water-end']
+                ['water-used']
+                ['water-exp-used']
+                ['water-exp-end']
+                ['water-ytd-used']
+                ['water-exp-ytd-used']
         """
         return self._metering_data[data_point]

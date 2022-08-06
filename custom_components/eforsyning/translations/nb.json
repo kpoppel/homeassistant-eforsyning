@@ -7,6 +7,7 @@
                     "password": "Kodeord",
                     "supplierid": "Leverandør ID (11111111-1111-1111-1111-111111111111)",
                     "billing_period_skew": "Afregning Juli til Juni?",
+                    "is_water_supply": "Marker for vandforsyning, ingen markering er varmeforsyning",
                     "entityname": "Valgfri - sæt entity navn præfiks (hvis du har flere målere)"
                 },
                 "title": "Angiv brugernavn, kodeord og leverandør ID"
