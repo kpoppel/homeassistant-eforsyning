@@ -369,13 +369,13 @@ class Eforsyning:
                 "DateTo" : datetime.strptime(fl["TilDatoStr"], "%d-%m-%Y").strftime("%Y-%m-%dT%H:%M:%S.000Z"),
 
                 "kWh-Start" : metering_data['energy-start'],
-                "kWh-End" : metering_data['energy-start'],
+                "kWh-End" : metering_data['energy-end'],
                 "kWh-Used" : metering_data['energy-used'],
                 "kWh-ExpUsed" : metering_data['energy-exp-used'],
                 "kWh-ExpEnd" : metering_data['energy-exp-end'],
 
                 "M3-Start" : metering_data['water-start'],
-                "M3-End" : metering_data['water-start'],
+                "M3-End" : metering_data['water-end'],
                 "M3-Used" : metering_data['water-used'],
                 "M3-ExpUsed" : metering_data['water-exp-used'],
                 "M3-ExpEnd" : metering_data['water-exp-end'],
