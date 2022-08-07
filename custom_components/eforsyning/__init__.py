@@ -1,32 +1,22 @@
 """The Eforsyning integration."""
 from __future__ import annotations
 
-import voluptuous as vol
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
 
-from custom_components.eforsyning.pyeforsyning.eforsyning import Eforsyning
-
-from homeassistant.util import Throttle
-import asyncio
-import logging
-import sys
-import requests
-
 from .const import DOMAIN, MIN_TIME_BETWEEN_UPDATES
 
-CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
+# The eForsyning integration - not on PyPi, just bundled here.
+# Contrary to:
+# https://developers.home-assistant.io/docs/creating_component_code_review#4-communication-with-devicesservices
+from custom_components.eforsyning.pyeforsyning.eforsyning import Eforsyning
+
+import logging
 
 PLATFORMS: list[Platform] = [Platform.SENSOR]
 
 _LOGGER = logging.getLogger(__name__)
-
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Set up the Eforsyning component."""
-    hass.data[DOMAIN] = {}
-    return True
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Eforsyning from a config entry."""
@@ -39,7 +29,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     billing_period_skew = entry.data['billing_period_skew'] # This one is true if the billing period is from July to June
     is_water_supply = entry.data['is_water_supply'] # This one is true if the module is for eforsyning water delivery (false for regional heating)
     
-    hass.data[DOMAIN][entry.entry_id] = API(username, password, supplierid, entityname, billing_period_skew, is_water_supply)
+    # Add the HomeAssistant specific API to the eForsyning integration.
+    # The Sensor entity in the integration will call function here to do its thing.
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][entry.entry_id] = API(username, password, supplierid, billing_period_skew, is_water_supply)
 
     hass.config_entries.async_setup_platforms(entry, PLATFORMS)
 
@@ -82,23 +75,14 @@ async def async_migrate_entry(hass, config_entry: ConfigEntry) -> bool:
     return True
 
 """ API for EForsyning.  Because of the @Throttle annotation it cannot live in the eforsyning module - but it should."""
+from homeassistant.util import Throttle
+import requests
+
 class API:
-    def __init__(self, username, password, supplierid, entityname, billing_period_skew, is_water_supply):
+    def __init__(self, username, password, supplierid, billing_period_skew, is_water_supply):
         self._client = Eforsyning(username, password, supplierid, billing_period_skew, is_water_supply)
-        self._data = None
-
-    def get_data(self, data_point):
-        """ Get the sensor reading from the eforsyning library"""
-        if self._data != None:
-            return self._data.get_data_point(data_point)
-        else:
-            return None
-
-    def get_data_date(self):
-        if self._data != None:
-            return self._data.data_date.date().strftime('%Y-%m-%d')
-        else:
-            return None
+        self.data = {}
+        _LOGGER.debug("An eForsyning API class was created")
 
     @Throttle(MIN_TIME_BETWEEN_UPDATES)
     def update(self):
@@ -106,26 +90,26 @@ class API:
         # When asked to help with some debug data - and extra noise
         # Remove the comment from this line, and comment out the rest of the
         # lines down to the last line
-        #self._data = self._client.get_latest()
+        self.data = self._client.get_latest()
 
         # From here -->
-        try: 
-            data = self._client.get_latest()
-            if data.status == 200:
-                self._data = data
-            else:
-                _LOGGER.warn(f"Error from eforsyning: {data.status} - {data.detailed_status}")
-        except requests.exceptions.HTTPError as he:
-            message = None
-            if he.response.status_code == 401:
-                message = f"Unauthorized error while accessing eforsyning.dk. Wrong or expired refresh token?"
-            else:
-                message = f"Exception: {e}"
-
-            _LOGGER.warn(message)
-        except: 
-            e = sys.exc_info()[0]
-            _LOGGER.warn(f"Exception: {e}")
+        #try: 
+        #    data = self._client.get_latest()
+        #    if data.status == 200:
+        #        self.data = data
+        #    else:
+        #        _LOGGER.warn(f"Error from eforsyning: {data.status} - {data.detailed_status}")
+        #except requests.exceptions.HTTPError as he:
+        #    message = None
+        #    if he.response.status_code == 401:
+        #        message = f"Unauthorized error while accessing eforsyning.dk. Wrong or expired refresh token?"
+        #    else:
+        #        message = f"Exception: {e}"
+        #
+        #    _LOGGER.warn(message)
+        #except: 
+        #    e = sys.exc_info()[0]
+        #    _LOGGER.warn(f"Exception: {e}")
         # <-- To here
         _LOGGER.debug("Done fetching data from Eforsyning")
 

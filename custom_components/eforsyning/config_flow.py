@@ -10,19 +10,20 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.const import CONF_NAME
 
-from .const import DOMAIN  # pylint:disable=unused-import
-
+from .const import DEFAULT_NAME, DOMAIN  # pylint:disable=unused-import
 
 _LOGGER = logging.getLogger(__name__)
 
-#from homeassistant import core, exceptions
-
+# Username/password are the ones for the website
+# supplierID is found by following the README.md instruction
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required("username") : str,
         vol.Required("password") : str,
         vol.Required("supplierid") : str,
+        #vol.Optional(CONF_NAME, default=DEFAULT_NAME): str
         vol.Optional("entityname", default='EForsyning') : str,
         vol.Required("billing_period_skew", default=False) : bool,
         vol.Required("is_water_supply", default=False) : bool
@@ -78,9 +79,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
-    async def async_step_user(
-        self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Handle the initial step."""
         if user_input is None:
             return self.async_show_form(

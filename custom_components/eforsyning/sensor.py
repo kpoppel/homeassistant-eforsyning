@@ -1,27 +1,40 @@
 """Platform for Eforsyning sensor integration."""
-import logging
-import datetime
+from __future__ import annotations
+from typing import Any, cast
+#from datetime import datetime
+
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+#from homeassistant.const import CONF_NAME
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.helpers.typing import StateType
+
 from homeassistant.const import (TEMP_CELSIUS,
                                  DEVICE_CLASS_ENERGY, DEVICE_CLASS_TEMPERATURE,
                                  DEVICE_CLASS_GAS,
                                  ENERGY_KILO_WATT_HOUR, VOLUME_CUBIC_METERS)
 from homeassistant.components.sensor import (SensorEntity, STATE_CLASS_MEASUREMENT, STATE_CLASS_TOTAL,
                                             STATE_CLASS_TOTAL_INCREASING)
-#from homeassistant.helpers.entity import Entity
-from custom_components.eforsyning.pyeforsyning.eforsyning import Eforsyning
-from custom_components.eforsyning.pyeforsyning.models import TimeSeries
+
+import logging
+_LOGGER = logging.getLogger(__name__)
 
 import uuid
 
-_LOGGER = logging.getLogger(__name__)
+from custom_components.eforsyning.pyeforsyning.eforsyning import Eforsyning
+from custom_components.eforsyning.pyeforsyning.models import TimeSeries
+
+from . import API
 from .const import DOMAIN
 
-
-
-async def async_setup_entry(hass, config, async_add_entities):
+async def async_setup_entry(hass:HomeAssistant, config:ConfigEntry, async_add_entities:AddEntitiesCallback) -> None:
     """Set up the sensor platform."""
     
-    eforsyning = hass.data[DOMAIN][config.entry_id]
+    # MAYBE: (right now use "entityname" - only to look more like the Novados integration)
+    # Use the name for the unique id of each sensor. novafos_<supplierid>?
+    #name: str = config.data[CONF_NAME]
+    coordinator = hass.data[DOMAIN][config.entry_id]
 
     # What data is available here:
     #_LOGGER.fatal(f"Config: {config.as_dict()}")
@@ -90,7 +103,7 @@ async def async_setup_entry(hass, config, async_add_entities):
         water_series = {"start", "end", "used", "exp-used", "exp-end", "ytd-used", "exp-ytd-used", "exp-fy-used"}
 
         for s in water_series:
-            sensors.append(EforsyningEnergy(f"{config.data['entityname']} Water {s}", "water", s, unique_id, eforsyning))
+            sensors.append(EforsyningSensor(f"{config.data['entityname']} Water {s}", "water", s, unique_id, coordinator))
     else:
         temp_series = {"forward", "return", "exp-return", "cooling"}
         energy_series = {"start", "end", "used", "exp-used", "exp-end"}
@@ -98,36 +111,39 @@ async def async_setup_entry(hass, config, async_add_entities):
         # It is recommended to use a truly unique ID when setting up sensors.  This one uses the entry_id because one could have
         # several accounts at the same supplier.  Also possible is to to use e.g. username+supplierid, but that gets kind of long.
         for s in temp_series:
-            sensors.append(EforsyningEnergy(f"{config.data['entityname']} Water Temperature {s}", "temp", s, unique_id, eforsyning))
+            sensors.append(EforsyningSensor(f"{config.data['entityname']} Water Temperature {s}", "temp", s, unique_id, coordinator))
 
         for s in energy_series:
-            sensors.append(EforsyningEnergy(f"{config.data['entityname']} Energy {s}", "energy", s, unique_id, eforsyning))
+            sensors.append(EforsyningSensor(f"{config.data['entityname']} Energy {s}", "energy", s, unique_id, coordinator))
 
         for s in energy_series:
-            sensors.append(EforsyningEnergy(f"{config.data['entityname']} Water {s}", "water", s, unique_id, eforsyning))
+            sensors.append(EforsyningSensor(f"{config.data['entityname']} Water {s}", "water", s, unique_id, coordinator))
 
     async_add_entities(sensors)
 
 
-class EforsyningEnergy(SensorEntity):
+class EforsyningSensor(SensorEntity):
     """Representation of a Sensor."""
-
-    def __init__(self, name, sensor_type, sensor_point, unique_id, client):
+    def __init__(self, name, sensor_type, sensor_point, unique_id, coordinator):
         """Initialize the sensor."""
-        self._state = None
-        self._data_date = None
-        self._data = client
+        self.coordinator = coordinator
+        self._attrs: dict[str, Any] = {}
+
+        _LOGGER.debug(f"Registering Sensor for {name}")
+
+        self._sensor_key = f"{sensor_type}-{sensor_point}"
+        # All sensors have access to all data in the API.
+        self._sensor_data = coordinator.data
 
         self._attr_name = name
+        self._attr_unique_id = f"{unique_id}-{self._sensor_key}"
 
-        self._sensor_value = f"{sensor_type}-{sensor_point}"
-        self._attr_unique_id = f"{unique_id}-{self._sensor_value}"  #<-- TODO: change name if multiple instances loaded
         if sensor_type == "energy":
             self._attr_native_unit_of_measurement = ENERGY_KILO_WATT_HOUR
             self._attr_icon = "mdi:lightning-bolt-circle"
             self._attr_device_class = DEVICE_CLASS_ENERGY
             self._attr_state_class = STATE_CLASS_MEASUREMENT #STATE_CLASS_TOTAL_INCREASING or STATE_CLASS_TOTAL
-            #self._attr_last_reset = datetime.datetime(2000, 1, 1, 0, 0, 0) #JSON: "2000-01-01T00:00:00"
+            #self._attr_last_reset = datetime(2000, 1, 1, 0, 0, 0) #JSON: "2000-01-01T00:00:00"
         elif sensor_type == "water":
             self._attr_native_unit_of_measurement = VOLUME_CUBIC_METERS
             self._attr_icon = "mdi:water"
@@ -143,19 +159,32 @@ class EforsyningEnergy(SensorEntity):
     @property
     def extra_state_attributes(self):
         """Return extra state attributes."""
-        attributes = dict()
-        attributes['metering_date'] = self._data_date
-        return attributes
+        if self._sensor_data:
+            self._attrs["data"] = self._sensor_data["data"]
+        else:
+            self._attrs = {}
+        return self._attrs
+
+    @property
+    def native_value(self) -> StateType:
+        if self._sensor_data:
+            return cast(float, self._sensor_data[self._sensor_key])
+        else:
+            return None
 
     def update(self):
-        """Fetch new state data for the sensor.
+        """
+        Fetch new state data for the sensor.
         This is the only method that should fetch new data for Home Assistant.
         """
-        _LOGGER.debug("Setting status for %s", self._attr_name)
+        self.coordinator.update()
+        # The HomeAssistent API frontend contains the data arranged by sensor name
+        self._sensor_data = self.coordinator.data
 
-        self._data.update()        
-
-        self._data_date = self._data.get_data_date()
-        self._attr_native_value = self._data.get_data(self._sensor_value)
-        _LOGGER.debug(f"Done setting status for {self._attr_name} = {self._attr_native_value} {self._attr_native_unit_of_measurement}")
-
+        # Note to self: while _sensor_data is setup to be a pointer to coordinator.data, it does not update.
+        #_LOGGER.debug(f"coordinator data: {self.coordinator.data}")
+        #_LOGGER.debug(f"_sensor_data: {self._sensor_data}")
+        if self.coordinator.data:
+            _LOGGER.debug(f"Updated status for {self._sensor_key} = {self._sensor_data[self._sensor_key]}")
+        else:
+            _LOGGER.error(f"Updated status for {self._sensor_key} resulted in empty dataset.")

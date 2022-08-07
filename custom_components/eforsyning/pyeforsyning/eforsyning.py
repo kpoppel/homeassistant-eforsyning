@@ -33,15 +33,16 @@ class Eforsyning:
         ## Must be a string - see where it is used.
         self._asset_id = "1"
         self._installation_id = "1"
+        self._access_token = ""
 
-    def _get_ebrugerid(self, access_token):
+    def _get_ebrugerid(self):
         '''
         This method returns the "ebrugerid" which is different from the username.
         This id is used to get the installations.
         Parameter "id" in the returned data is the ebrugerid
         '''
         _LOGGER.debug(f"Getting userinfo from API (ebrugerinfo)")
-        userinfoURL = self._api_server + "api/getebrugerinfo?id=" + access_token
+        userinfoURL = self._api_server + "api/getebrugerinfo?id=" + self._access_token
         _LOGGER.debug(f"Trying: {userinfoURL}")
         result = requests.get(userinfoURL,
                                 timeout = 5
@@ -51,11 +52,14 @@ class Eforsyning:
 
         result_json = result.json()
 
-        _LOGGER.debug(f"Response from userinfo API. ebrugerinfo: {result.status_code}, Body: {result.text}, ebruger: {result_json['id']}")
+        if result.status_code == 200:
+            _LOGGER.debug(f"Response from userinfo API. ebrugerinfo: {result.status_code}, Body: {result.text}, ebruger: {result_json['id']}")
+        else:
+            _LOGGER.error(f"Response from userinfo API. ebrugerinfo: {result.status_code}, Body: {result.text}")
 
         return result_json['id']
 
-    def _get_intallations(self, access_token):
+    def _get_intallations(self):
         '''
         Get the installations to set installation_id and asset_id
         Restriction:  We will find the first installation_id == 1 and
@@ -68,10 +72,10 @@ class Eforsyning:
         # https://api2.dff-edb.dk/kongerslev/api/FindInstallationer?id=fec53bccc22d0d92a9ab7e439188bd3f
         _LOGGER.debug(f"Getting installations at supplier: {self._supplierid}")
  
-        ebrugerid = self._get_ebrugerid(access_token)
+        ebrugerid = self._get_ebrugerid()
 
         ## Get the URL to the REST API service
-        installationsURL=self._api_server + "api/FindInstallationer?id=" + access_token
+        installationsURL=self._api_server + "api/FindInstallationer?id=" + self._access_token
         _LOGGER.debug(f"Trying: {installationsURL}")
         data = {
                 "Soegetekst": "",
@@ -128,7 +132,7 @@ class Eforsyning:
         NOTE: The API service actually don't care about the dates at this point in time.
               Regardless of what we ask for, all data in the requested resolution
               (Year, Monthly, Daily) is returned.  This means requesting daily data
-              will return a massive array of 365'is data points!
+              will return an array of data from start of billing period to today's date.
         '''
         _LOGGER.debug(f"Getting time series")
 
@@ -137,17 +141,13 @@ class Eforsyning:
         if to_date is None:
             to_date = datetime.now()
 
-        access_token = self._get_access_token()
-
-        self._get_intallations(access_token)
-
         date_format = '%d-%m-%Y'
         parsed_from_date = from_date.strftime(date_format)
         parsed_to_date = to_date.strftime(date_format)
 
         headers = self._create_headers()
 
-        post_meter_data_url = "api/getforbrug?id="+access_token+"&unr="+self._username+"&anr="+self._asset_id+"&inr="+self._installation_id # POST
+        post_meter_data_url = "api/getforbrug?id="+self._access_token+"&unr="+self._username+"&anr="+self._asset_id+"&inr="+self._installation_id # POST
 
         include_data_in_between = "false"
         if month or day:
@@ -226,27 +226,36 @@ class Eforsyning:
         security_token_url = self._api_server + "system/getsecuritytoken/project/app/consumer/" + self._username
         result = requests.get(security_token_url)
         result.raise_for_status()
+
+        if result.status_code != 200:
+            _LOGGER.error("Not able to get access token.  Probably a wrong username.")
+            return False
+
         result_json = result.json()
         token = result_json['Token']
         ## TODO exception if token is '' (this happens if the username is invalid)
+
         hashed_password = hashlib.md5(self._password.encode()).hexdigest()
         crypt_string = hashed_password + token
-        access_token = hashlib.md5(crypt_string.encode()).hexdigest()
+        self._access_token = hashlib.md5(crypt_string.encode()).hexdigest()
+        _LOGGER.debug(f"Got access token: {self._access_token}")
+        return True
 
+    def _login(self):
         # Use the new token to login to the API service
         auth_url = "system/login/project/app/consumer/"+self._username+"/installation/1/id/"
 
-        result = requests.get(self._api_server + auth_url + access_token)
+        result = requests.get(self._api_server + auth_url + self._access_token)
         result.raise_for_status()
         result_json = result.json()
         result_status = result_json['Result']
         if result_status == 1:
             _LOGGER.debug("Login success")
         else:
-            _LOGGER.debug("Login failed. Bye.")
+            _LOGGER.error("Login failed. Bye.")
+            return False
 
-        _LOGGER.debug(f"Got access token: {access_token}")
-        return access_token
+        return True
 
     def _create_headers(self):
         return {
@@ -259,7 +268,15 @@ class Eforsyning:
         '''
         _LOGGER.debug(f"Getting latest data")
 
-        # Calcuate the year parameter.  If the billing period is not skewed we
+        if not self._get_access_token():
+            return None
+
+        if not self._login():
+            return None
+
+        self._get_intallations()
+
+        # Calculate the year parameter.  If the billing period is not skewed we
         # use the current year.  If it is skewed we must use the year before until
         # the billing period changes from July 1st.
         year = datetime.now().year
@@ -276,18 +293,14 @@ class Eforsyning:
             json_response = json.loads(raw_data.body)
 
             if self._is_water_supply == False:
-                r = self._parse_result_heating(json_response)
+                result = self._parse_result_heating(json_response)
             else:
-                r = self._parse_result_water(json_response)
+                result = self._parse_result_water(json_response)
 
-            keys = list(r.keys())
-
-            keys.sort()
-            keys.reverse()
-
-            result = r[keys[0]]
+            #_LOGGER.debug(f"line 300 eforsyning.py: Result: {result}")
         else:
-            result = TimeSeries(raw_data.status, None, None, raw_data.body)
+            result = None
+            #result = TimeSeries(raw_data.status, None, None, raw_data.body)
 
         _LOGGER.debug("Done getting latest data (status code:%d)", raw_data.status)
         return result
@@ -305,11 +318,14 @@ class Eforsyning:
         Parse result from API call. This is a JSON dict.
         '''
         _LOGGER.debug(f"Parsing results - heating metering")
-        parsed_result = {}
 
         metering_data = {}
+        # Extract data from the latest data point
         metering_data['year_start'] = result['AarStart']
         metering_data['year_end']   = result['AarSlut']
+
+        # Save all relevant day data so it can be extracted by users of the API (like HomeAssistant attributes)
+        metering_data['data'] = []
         for fl in result['ForbrugsLinjer']['TForbrugsLinje']:
             metering_data['temp-forward'] = self._stof(fl['Tempfrem'])
             metering_data['temp-return'] = self._stof(fl['TempRetur'])
@@ -317,52 +333,69 @@ class Eforsyning:
             metering_data['temp-cooling'] = self._stof(fl['Afkoling'])
             for reading in fl['TForbrugsTaellevaerk']:
                 unit = reading['Enhed_Txt']
-                if reading['IndexNavn'] == "ENG1":
-                    #_LOGGER.debug(f"Energy use unit is: {unit}")
-                    multiplier = 1
-                    if unit == "MWh":
-                        multiplier = 1000
-                    metering_data['energy-start'] = self._stof(reading['Start']) * multiplier
-                    metering_data['energy-end'] = self._stof(reading['Slut']) * multiplier
-                    metering_data['energy-used'] = self._stof(reading['Forbrug']) * multiplier
-                    metering_data['energy-exp-used'] = self._stof(fl['ForventetForbrugENG1']) * multiplier
-                    metering_data['energy-exp-end'] = self._stof(fl['ForventetAflaesningENG1']) * multiplier
-                elif reading['IndexNavn'] == "M3":
+                #_LOGGER.debug(f"Energy use unit is: {unit}")
+                multiplier = 1
+                if unit == "MWh":
+                    multiplier = 1000
+
+                if reading['IndexNavn'] == "M3":
                     metering_data['water-start'] = self._stof(reading['Start'])
                     metering_data['water-end'] = self._stof(reading['Slut'])
                     metering_data['water-used'] = self._stof(reading['Forbrug'])
                     metering_data['water-exp-used'] = self._stof(fl['ForventetForbrugM3'])
                     metering_data['water-exp-end'] = self._stof(fl['ForventetAflaesningM3'])
+                elif reading['IndexNavn'] == "ENG1":
+                    metering_data['energy-start'] = self._stof(reading['Start']) * multiplier
+                    metering_data['energy-end'] = self._stof(reading['Slut']) * multiplier
+                    metering_data['energy-used'] = self._stof(reading['Forbrug']) * multiplier
+                    metering_data['energy-exp-used'] = self._stof(fl['ForventetForbrugENG1']) * multiplier
+                    metering_data['energy-exp-end'] = self._stof(fl['ForventetAflaesningENG1']) * multiplier
+                elif reading['IndexNavn'] == "ENG2":
+                    metering_data['energy-eng2-start'] = self._stof(reading['Start']) * multiplier
+                    metering_data['energy-eng2-end'] = self._stof(reading['Slut']) * multiplier
+                    metering_data['energy-eng2-used'] = self._stof(reading['Forbrug']) * multiplier
+                elif reading['IndexNavn'] == "TV2":
+                    metering_data['energy-tv2-start'] = self._stof(reading['Start']) * multiplier
+                    metering_data['energy-tv2-end'] = self._stof(reading['Slut']) * multiplier
+                    metering_data['energy-tv2-used'] = self._stof(reading['Forbrug']) * multiplier
                 else:
+                    # This would be "TIME_"
                     metering_data['extra-start'] = self._stof(reading['Start'])
                     metering_data['extra-end'] = self._stof(reading['Slut'])
                     metering_data['extra-used'] = self._stof(reading['Forbrug'])
 
-        # Because we are fetching data from the full year (or so far)
-        # The date is generated internally to be todays day of course.
-        date = datetime.now()
+            metering_data['data'].append({
+                "DateFrom" : datetime.strptime(fl["FraDatoStr"], "%d-%m-%Y").strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                "DateTo" : datetime.strptime(fl["TilDatoStr"], "%d-%m-%Y").strftime("%Y-%m-%dT%H:%M:%S.000Z"),
 
-# Fake data testing:
-#        metering_data['temp-forward'] = random.randint(0, 100)
-#        metering_data['temp-return'] = random.randint(0, 100)
-#        metering_data['temp-exp-return'] = random.randint(0, 100)
-#        metering_data['temp-cooling'] = random.randint(0, 100)
-#        metering_data['energy-start'] = random.randint(0, 100)
-#        metering_data['energy-end'] = random.randint(0, 100)
-#        metering_data['energy-used'] = random.randint(0, 100)
-#        metering_data['energy-exp-used'] = random.randint(0, 100)
-#        metering_data['energy-exp-end'] = random.randint(0, 100)
-#        metering_data['water-start'] = random.randint(0, 100)
-#        metering_data['water-end'] = random.randint(0, 100)
-#        metering_data['water-used'] = random.randint(0, 100)
-#        metering_data['water-exp-used'] = random.randint(0, 100)
-#        metering_data['water-exp-end'] = random.randint(0, 100)
-#        date = datetime.strptime("2020-01-28T14:45:12Z", '%Y-%m-%dT%H:%M:%SZ')
+                "kWh-Start" : metering_data['energy-start'],
+                "kWh-End" : metering_data['energy-start'],
+                "kWh-Used" : metering_data['energy-used'],
+                "kWh-ExpUsed" : metering_data['energy-exp-used'],
+                "kWh-ExpEnd" : metering_data['energy-exp-end'],
 
-        time_series = TimeSeries(200, date, metering_data)
-        parsed_result[date] = time_series
+                "M3-Start" : metering_data['water-start'],
+                "M3-End" : metering_data['water-start'],
+                "M3-Used" : metering_data['water-used'],
+                "M3-ExpUsed" : metering_data['water-exp-used'],
+                "M3-ExpEnd" : metering_data['water-exp-end'],
+
+                "Temp-forward" : metering_data['temp-forward'],
+                "Temp-Return" : metering_data['temp-return'],
+                "Temp-ExpReturn" : metering_data['temp-exp-return'],
+                "Temp-Cooling" : metering_data['temp-cooling'],
+
+                "kWh-ENG2-Start" : metering_data['energy-eng2-start'],
+                "kWh-ENG2-End" : metering_data['energy-eng2-end'],
+                "kWh-ENG2-Used" : metering_data['energy-eng2-used'],
+
+                "kWh-TV2-Start" : metering_data['energy-tv2-start'],
+                "kWh-TV2-End" : metering_data['energy-tv2-end'],
+                "kWh-TV2-Used" : metering_data['energy-tv2-used'],
+            })
+
         _LOGGER.debug(f"Done parsing results")
-        return parsed_result
+        return metering_data
 
     def _parse_result_water(self, result):
         '''
@@ -376,20 +409,11 @@ class Eforsyning:
 
         '''
         _LOGGER.debug(f"Parsing results - water metering")
-        parsed_result = {}
 
         metering_data = {}
+        # Extract data from the latest data point
         metering_data['year_start'] = result['AarStart']
         metering_data['year_end']   = result['AarSlut']
-        # Obviously this results in only the last entry of the last metering device to be saved...
-        for fl in result['ForbrugsLinjer']['TForbrugsLinje']:
-            for reading in fl['TForbrugsTaellevaerk']:
-                metering_data['water-start'] = self._stof(reading['Start'])
-                metering_data['water-end'] = self._stof(reading['Slut'])
-                metering_data['water-used'] = self._stof(reading['Forbrug'])
-            metering_data['water-exp-used'] = self._stof(fl['ForventetForbrugM3'])
-            metering_data['water-exp-end'] = self._stof(fl['ForventetAflaesningM3'])
-
         metering_data['water-ytd-used'] = self._stof(result['IaltLinje']['TForbrugsTaellevaerk'][0]['Forbrug'])
         metering_data['water-exp-fy-used'] = self._stof(result['IaltLinje']['ForventetForbrugM3'])
         # Calculate expected year to date consumption
@@ -397,11 +421,25 @@ class Eforsyning:
         end = self._stof(result['ForbrugsLinjer']['TForbrugsLinje'][-1]['ForventetAflaesningM3'])
         metering_data['water-exp-ytd-used'] = end - start
 
-        # Because we are fetching data from the full year (or so far)
-        # The date is generated internally to be todays day of course.
-        date = datetime.now()
+        # Save all relevant day data so it can be extracted by users of the API (like HomeAssistant attributes)
+        metering_data['data'] = []
+        for fl in result['ForbrugsLinjer']['TForbrugsLinje']:
+            metering_data['water-exp-used'] = self._stof(fl['ForventetForbrugM3'])
+            metering_data['water-exp-end'] = self._stof(fl['ForventetAflaesningM3'])
+            for reading in fl['TForbrugsTaellevaerk']:
+                metering_data['water-start'] = self._stof(reading['Start'])
+                metering_data['water-end'] = self._stof(reading['Slut'])
+                metering_data['water-used'] = self._stof(reading['Forbrug'])
 
-        time_series = TimeSeries(200, date, metering_data)
-        parsed_result[date] = time_series
+            metering_data['data'].append({
+                "DateFrom" : datetime.strptime(fl["FraDatoStr"], "%d-%m-%Y").strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                "DateTo" : datetime.strptime(fl["TilDatoStr"], "%d-%m-%Y").strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+                "Start" : metering_data['water-start'],
+                "End" : metering_data['water-start'],
+                "Used" : metering_data['water-used'],
+                "ExpUsed" : metering_data['water-exp-used'],
+                "ExpEnd" : metering_data['water-exp-end'],
+            })
+
         _LOGGER.debug(f"Done parsing results")
-        return parsed_result
+        return metering_data
