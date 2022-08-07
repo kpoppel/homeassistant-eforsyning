@@ -380,7 +380,7 @@ class Eforsyning:
                 "M3-ExpUsed" : metering_data['water-exp-used'],
                 "M3-ExpEnd" : metering_data['water-exp-end'],
 
-                "Temp-forward" : metering_data['temp-forward'],
+                "Temp-Forward" : metering_data['temp-forward'],
                 "Temp-Return" : metering_data['temp-return'],
                 "Temp-ExpReturn" : metering_data['temp-exp-return'],
                 "Temp-Cooling" : metering_data['temp-cooling'],
