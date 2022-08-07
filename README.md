@@ -4,7 +4,7 @@
 
 The `eforsyning`component is a Home Assistant custom component for monitoring your regional heating supply data from eforsyning.dk
 
-*The custom component in it's very early stage for showing data from eforsyning.dk.*
+*This custom component is to be considered a hobby project, developed as I see fit, and updated when I see a need, or am inspired by a feature request.  I am open for suggestions and issues detailing problems, but please don't expect me to fix it right away.*
 
 ## Installation
 ---
@@ -46,25 +46,82 @@ This part is a little tricky, but hang on:
 
 ## State and attributes
 ---
-Many sensors are created - 14 in total actually.  The naming scheme is `sensor.eforsyning.<name>`.
+
+Depending on checking the switch for heating or water supply, a specific set of sensors are made available to Home Assistant.
+
+### Sensors for heating supply
+
+Many sensors are created - 14 in total actually.  The naming scheme is `sensor.eforsyning.<name>`. (Unless you changed the "eforsyning" name).
+
 The names are hopefully self-explanatory:
 
-* energy_start
-* energy_end
-* energy_exp_end
-* energy_exp_used
-* energy_used
-* water_start
-* water_end
-* water_exp_end
-* water_used
-* water_exp_used
-* water_temperature_return
-* water_exp_temperature_return
-* water_temperature_cooling
-* water_temperature_forward
+* energy-start
+* energy-end
+* energy-exp-end  (expected end value)
+* energy-used
+* energy-exp-used (expected used value)
+* water-start
+* water-end
+* water-exp_end
+* water-used
+* water-exp_used
+* temp-return
+* temp-exp-return
+* temp-cooling
+* temp-forward
+
+Additionally all sensors have historical data available for use with for example ApexChart.  This data is not saved to the database and it only exists on the latest data point.  The historical data exists because the integration fetches all data for the full billing year to avoid averaging on the data points.
+
+As attribute data, the following is available:
+
+* DateFrom
+* DateTo
+* kWh-Start
+* kWh-End
+* kWh-Used
+* kWh-ExpUsed
+* kWh-ExpEnd
+* M3-Start
+* M3-End
+* M3-Used
+* M3-ExpUsed
+* M3-ExpEnd
+* Temp-Forward
+* Temp-Return
+* Temp-ExpReturn
+* Temp-Cooling
+* kWh-ENG2-Start
+* kWh-ENG2-End
+* kWh-ENG2-Used
+* kWh-TV2-Start
+* kWh-TV2-End
+* kWh-TV2-Used
+
+### Sensors for water supply
+
+Many sensors are created - 14 in total actually.  The naming scheme is `sensor.eforsyning.<name>`. (Unless you changed the "eforsyning" name).
+
+* water-start
+* water-end
+* water-exp-end
+* water-used
+* water-exp-used
+* water-ytd-used (total consumption year-to-date)
+* water-exp-ytd-used (expected total consumption year-to-date))
+* water-exp-fy-used (expected full year consumption prognosis)
+
+As attributes the following data is available:
+
+* DateFrom
+* DateTo
+* Start
+* End
+* Used
+* ExpUsed
+* ExpEnd
 
 ## Debugging
+---
 It is possible to debug log the raw response from eforsyning.dk API. This is done by setting up logging like below in configuration.yaml in Home Assistant. It is also possible to set the log level through a service call in UI.  
 
 ```
@@ -75,6 +132,7 @@ logger:
 ```
 
 ## Examples
+---
 
 ### Daily and expected energy use some days back
 Below is an example of how to display energy used vs expected in a graph. 
@@ -102,3 +160,91 @@ cards:
         name: Forventet Forbrug
   ...add more cards here...
   ```
+
+### Apexchart example
+
+There is so much which can be done with ApexChart.  This is one example of charting the water meter reading actual versus expected.
+
+Key points below:
+* While all sensors have the same attributes, you should use one with the right unit of measurement to get M3, kWh or degrees C in the chart.
+* Check if data is compatible in value range.  A Range of 100 does not look like much together with a value of range 10000
+* The attribute value is the part ["End"], ["ExpEnd"] below.  Change just these to extract other data, the rest can stay the same.
+
+![alt text](images/example2.png "Water consumption Year-to-date")
+
+```
+type: custom:apexcharts-card
+graph_span: 365d
+span:
+  end: day
+header:
+  show: true
+  title: Vandforbrug
+  show_states: true
+  colorize_states: true
+all_series_config:
+  show:
+    legend_value: false
+    datalabels: false
+    extremas: true
+    in_brush: true
+  float_precision: 3
+  type: area
+  invert: false
+series:
+  - entity: sensor.mitvand_water_used
+    type: area
+    data_generator: |
+      return entity.attributes.data.map((start, index) => {
+        return [new Date(start["DateFrom"]).getTime(), entity.attributes.data[index]["End"]];
+      });
+  - entity: sensor.mitvand_water_exp_used
+    type: area
+    data_generator: |
+      return entity.attributes.data.map((start, index) => {
+        return [new Date(start["DateFrom"]).getTime(), entity.attributes.data[index]["ExpEnd"]];
+      });
+
+```
+
+### Another Apexchart example
+
+This one shows the kWh consumption of the heating versus the expected.  I was great to see the Summer coming along and energy consumption heading towards zero.
+
+![alt text](images/example3.png "Water consumption Year-to-date")
+
+The template is the same as above, just using different sensors and attributes:
+
+```
+type: custom:apexcharts-card
+graph_span: 365d
+span:
+  end: day
+header:
+  show: true
+  title: Varme - kWh forbrug
+  show_states: true
+  colorize_states: true
+all_series_config:
+  show:
+    legend_value: false
+    datalabels: false
+    extremas: true
+    in_brush: true
+  float_precision: 3
+  type: area
+  invert: false
+series:
+  - entity: sensor.eforsyning_energy_used
+    type: area
+    data_generator: |
+      return entity.attributes.data.map((start, index) => {
+        return [new Date(start["DateFrom"]).getTime(), entity.attributes.data[index]["kWh-Used"]];
+      });
+  - entity: sensor.eforsyning_energy_exp_used
+    type: area
+    data_generator: |
+      return entity.attributes.data.map((start, index) => {
+        return [new Date(start["DateFrom"]).getTime(), entity.attributes.data[index]["kWh-ExpUsed"]];
+      });
+```
