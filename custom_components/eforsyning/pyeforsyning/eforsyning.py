@@ -305,13 +305,18 @@ class Eforsyning:
         _LOGGER.debug("Done getting latest data (status code:%d)", raw_data.status)
         return result
 
-    def _stof(self, fstr):
+    def _stof(self, fstr, limit=None):
         """Convert string with ',' string float to float.
            If the string is empty just return 0.0.
         """
         if fstr == "":
             return 0.0
-        return float(fstr.replace(',', '.'))
+
+        val = float(fstr.replace(',', '.'))
+        # Cull values above limit.  Some times data deliverd are missing decimal comma!
+        if limit and val > limit:
+            return 0.0
+        return val
 
     def _parse_result_heating(self, result):
         '''
@@ -327,10 +332,10 @@ class Eforsyning:
         # Save all relevant day data so it can be extracted by users of the API (like HomeAssistant attributes)
         metering_data['data'] = []
         for fl in result['ForbrugsLinjer']['TForbrugsLinje']:
-            metering_data['temp-forward'] = self._stof(fl['Tempfrem'])
-            metering_data['temp-return'] = self._stof(fl['TempRetur'])
-            metering_data['temp-exp-return'] = self._stof(fl['Forv_Retur'])
-            metering_data['temp-cooling'] = self._stof(fl['Afkoling'])
+            metering_data['temp-forward'] = self._stof(fl['Tempfrem'], limit=150)
+            metering_data['temp-return'] = self._stof(fl['TempRetur'], limit=150)
+            metering_data['temp-exp-return'] = self._stof(fl['Forv_Retur'], limit=150)
+            metering_data['temp-cooling'] = self._stof(fl['Afkoling'], limit=150)
             for reading in fl['TForbrugsTaellevaerk']:
                 unit = reading['Enhed_Txt']
                 #_LOGGER.debug(f"Energy use unit is: {unit}")
