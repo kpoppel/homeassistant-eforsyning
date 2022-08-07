@@ -209,7 +209,7 @@ series:
 
 ### Another Apexchart example
 
-This one shows the kWh consumption of the heating versus the expected.  I was great to see the Summer coming along and energy consumption heading towards zero.
+This one shows the kWh consumption of the heating versus the expected.  It was great to see the Summer coming along and energy consumption heading towards zero.
 
 ![alt text](images/example3.png "Water consumption Year-to-date")
 
