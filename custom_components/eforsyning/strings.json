@@ -1,6 +1,5 @@
 {
   "config": {
-    "title": "Eforsyning",
     "step": {
       "user": {
         "title": "Connect to the device",
