@@ -99,7 +99,7 @@ As attribute data, the following is available:
 
 ### Sensors for water supply
 
-Many sensors are created - 14 in total actually.  The naming scheme is `sensor.eforsyning.<name>`. (Unless you changed the "eforsyning" name).
+A different set of sensors are created, 8 in total.  The naming scheme is `sensor.eforsyning.<name>`. (Unless you changed the "eforsyning" name).
 
 * water-start
 * water-end
