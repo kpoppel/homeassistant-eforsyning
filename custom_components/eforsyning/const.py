@@ -10,3 +10,6 @@ DEFAULT_NAME = "eForsyning"
 MIN_TIME_BETWEEN_UPDATES = timedelta(hours=6)
 # Sure, let's bash the API service.. But useful when trying to get results fast.
 #MIN_TIME_BETWEEN_UPDATES = timedelta(minutes=1)
+
+DATA_COORDINATOR = "eforsyning_coordinator"
+DATA_API = "eforsyning_api"

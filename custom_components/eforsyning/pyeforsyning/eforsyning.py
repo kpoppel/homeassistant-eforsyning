@@ -269,6 +269,7 @@ class Eforsyning:
         _LOGGER.debug(f"Getting latest data")
 
         if not self._get_access_token():
+            _LOGGER.error("eForsyning could not get access token! (Don't call the API until next window)")
             return None
 
         if not self._login():
