@@ -3,12 +3,21 @@ from __future__ import annotations
 from typing import Any, cast
 #from datetime import datetime
 
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-#from homeassistant.const import CONF_NAME
+from homeassistant.const import CONF_NAME
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.typing import StateType
+from homeassistant.helpers.update_coordinator import (
+    CoordinatorEntity,
+    DataUpdateCoordinator,
+)
+
+import logging
+_LOGGER = logging.getLogger(__name__)
+
+from .const import DOMAIN
 
 from homeassistant.const import (TEMP_CELSIUS,
                                  DEVICE_CLASS_ENERGY, DEVICE_CLASS_TEMPERATURE,
@@ -16,29 +25,20 @@ from homeassistant.const import (TEMP_CELSIUS,
                                  ENERGY_KILO_WATT_HOUR, VOLUME_CUBIC_METERS)
 from homeassistant.components.sensor import (SensorEntity, STATE_CLASS_MEASUREMENT, STATE_CLASS_TOTAL,
                                             STATE_CLASS_TOTAL_INCREASING)
-from homeassistant.helpers.update_coordinator import (
-    CoordinatorEntity )
-from homeassistant.core import callback    
-
-import logging
-_LOGGER = logging.getLogger(__name__)
 
 import uuid
 
-from custom_components.eforsyning.pyeforsyning.eforsyning import Eforsyning
-from custom_components.eforsyning.pyeforsyning.models import TimeSeries
-
-from . import API
-from .const import DOMAIN, DATA_COORDINATOR
-
-async def async_setup_entry(hass:HomeAssistant, config:ConfigEntry, async_add_entities:AddEntitiesCallback) -> None:
+async def async_setup_entry(
+    hass:HomeAssistant,
+    config:ConfigEntry,
+    async_add_entities:AddEntitiesCallback) -> None:
     """Set up the sensor platform."""
-    
-    # MAYBE: (right now use "entityname" - only to look more like the Novados integration)
-    # Use the name for the unique id of each sensor. novafos_<supplierid>?
+    # Use the name for the unique id of each sensor. eforsyning_<supplierid>?
     #name: str = config.data[CONF_NAME]
-    # old: coordinator = hass.data[DOMAIN][config.entry_id]
-    coordinator = hass.data[DOMAIN][config.entry_id][DATA_COORDINATOR]
+    coordinator: DataUpdateCoordinator = hass.data[DOMAIN][config.entry_id]["coordinator"]
+    # coordinator has a 'data' field.  This is set to the returned API data value.
+    # _async_update_data updates the field.
+    # From this field the sensors will get their values afterwards.
 
     # What data is available here:
     #_LOGGER.fatal(f"Config: {config.as_dict()}")
@@ -101,7 +101,8 @@ async def async_setup_entry(hass:HomeAssistant, config:ConfigEntry, async_add_en
     #   IaltLinje.ForventetForbrugM3
     #   ForbrugsLinjer.TForbrugsLinje[last].ForventetAflaesningM3 - ForbrugsLinjer.TForbrugsLinje[0].ForventetAflaesningM3
 
-    sensors = []
+    # The sensors are defined in the const.py file
+    sensors: list[EforsyningSensor] = []
     unique_id = "eforsyning-" + str(uuid.uuid3(uuid.NAMESPACE_URL, f"{config.data['username']}-{config.data['supplierid']}"))
     if(config.data['is_water_supply']):
         water_series = {"start", "end", "used", "exp-used", "exp-end", "ytd-used", "exp-ytd-used", "exp-fy-used"}
@@ -187,42 +188,3 @@ class EforsyningSensor(CoordinatorEntity, SensorEntity):
         else:
             return None
 
-    @callback
-    def _handle_coordinator_update(self) -> None:
-        """Handle updated data from the coordinator."""
-        # The HomeAssistent API frontend contains the data arranged by sensor name
-        self._sensor_data = self.coordinator.data
-        if self.coordinator.data:
-            _LOGGER.debug(f"Updated status for {self._sensor_key} = {self._sensor_data[self._sensor_key]}")
-        else:
-            _LOGGER.error(f"Updated status for {self._sensor_key} resulted in empty dataset.")
-#        self._attr_is_on = self.coordinator.data[self.idx]["state"]
-        self.async_write_ha_state()
-
-#    def update(self):
-#        """
-#        Fetch new state data for the sensor.
-#        This is the only method that should fetch new data for Home Assistant.
-#        """
-#        # TODO: uodate called for each and every sensor!!!
-#        self.coordinator.update()
-#        # The HomeAssistent API frontend contains the data arranged by sensor name
-#        self._sensor_data = self.coordinator.data
-#
-#        # Note to self: while _sensor_data is setup to be a pointer to coordinator.data, it does not update.
-#        #_LOGGER.debug(f"coordinator data: {self.coordinator.data}")
-#        #_LOGGER.debug(f"_sensor_data: {self._sensor_data}")
-#        if self.coordinator.data:
-#            _LOGGER.debug(f"Updated status for {self._sensor_key} = {self._sensor_data[self._sensor_key]}")
-#        else:
-#            _LOGGER.error(f"Updated status for {self._sensor_key} resulted in empty dataset.")
-
-########
-## Note:  If the sensor makes an active update (not here) it can request an ative update:
-#    async def async_my_action(self, **kwargs):
-#        """Do some action and request an update to get the effect """
-#        # Do the action
-#        # ...
-#
-#        # Update the data
-#        await self.coordinator.async_request_refresh()

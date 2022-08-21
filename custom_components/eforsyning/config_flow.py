@@ -1,7 +1,6 @@
 """Config flow for Eforsyning integration."""
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 import voluptuous as vol
@@ -12,9 +11,12 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.const import CONF_NAME
 
-from .const import DEFAULT_NAME, DOMAIN  # pylint:disable=unused-import
+from .const import DEFAULT_NAME, DOMAIN
 
+import logging
 _LOGGER = logging.getLogger(__name__)
+
+from custom_components.eforsyning.pyeforsyning.eforsyning import Eforsyning, LoginFailed, HTTPFailed
 
 # Username/password are the ones for the website
 # supplierID is found by following the README.md instruction
@@ -23,54 +25,31 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required("username") : str,
         vol.Required("password") : str,
         vol.Required("supplierid") : str,
-        #vol.Optional(CONF_NAME, default=DEFAULT_NAME): str
         vol.Optional("entityname", default='EForsyning') : str,
         vol.Required("billing_period_skew", default=False) : bool,
-        vol.Required("is_water_supply", default=False) : bool
+        vol.Required("is_water_supply", default=False) : bool,
+        #vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
     }
 )
-
-#class PlaceholderHub:
-#    """Placeholder class to make tests pass.
-#
-#    TODO Remove this placeholder class and replace with things from your PyPI package.
-#    """
-#
-#    def __init__(self, host: str) -> None:
-#        """Initialize."""
-#        self.host = host
-#
-#    async def authenticate(self, username: str, password: str) -> bool:
-#        """Test if we can authenticate with the host."""
-#        return True
-
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect.
 
     Data has the keys from STEP_USER_DATA_SCHEMA with values provided by the user.
     """
-    # TODO validate the data can be used to set up a connection.
+    # Returns True or False.  The API is not built for async operation
+    # therefore it is wrapped in an async executor function.
+    try:
+        api = Eforsyning(data["username"], data["password"], data["supplierid"], data["billing_period_skew"], data["is_Water_supply"])
+        await hass.async_add_executor_job(api.authenticate)
+    except LoginFailed:
+        raise InvalidAuth
+    except HTTPFailed:
+        raise CannotConnect
 
-    # If your PyPI package is not built with async, pass your methods
-    # to the executor:
-    # await hass.async_add_executor_job(
-    #     your_validate_func, data["username"], data["password"]
-    # )
-
-    #hub = PlaceholderHub(data["host"])
-
-    #if not await hub.authenticate(data["username"], data["password"]):
-    #    raise InvalidAuth
-
-    # If you cannot connect:
-    # throw CannotConnect
-    # If the authentication is wrong:
-    # InvalidAuth
-
-    # Return info that you want to store in the config entry.
+    # Return info to store in the config entry.
+    # title becomes the title on the integrations screen in the UI
     return {"title": f"Eforsyning {data['supplierid']}"}
-
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Eforsyning."""

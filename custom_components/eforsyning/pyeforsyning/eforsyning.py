@@ -5,15 +5,20 @@ from datetime import datetime
 from datetime import timedelta
 import json
 import requests
+import http
 import logging
 import hashlib
-from .models import RawResponse
-from .models import TimeSeries
 
 # Test
 import random
 
 _LOGGER = logging.getLogger(__name__)
+
+class LoginFailed(Exception):
+    """"Exception class for bad credentials"""
+
+class HTTPFailed(Exception):
+    """Exception class for API HTTP failures"""
 
 class Eforsyning:
     '''
@@ -187,75 +192,95 @@ class Eforsyning:
             }
 
         _LOGGER.debug(f"POST data to API. {data}")
+        result = None
+        try:
+            result = requests.post(self._api_server + post_meter_data_url,
+                                    data = json.dumps(data),
+                                    timeout = 5,
+                                    headers=headers
+                                )
+        except requests.exceptions.RequestException:
+            raise HTTPFailed(result.raise_for_status())
 
-        result = requests.post(self._api_server + post_meter_data_url,
-                                data = json.dumps(data),
-                                timeout = 5,
-                                headers=headers
-                              )
+        _LOGGER.debug(f"Done getting time series {result.status_code}, Body: {result.text}")
 
-        _LOGGER.debug(f"Response from API. Status: {result.status_code}, Body: {result.text}")
-
-        raw_response = RawResponse()
-        raw_response.status = result.status_code
-        raw_response.body = result.text
-
-        _LOGGER.debug(f"Done getting time series")
-
-        return raw_response
+        return result.json()
 
     def _get_api_server(self):
         _LOGGER.debug(f"Getting api server at supplier {self._supplierid}")
         ## Get the URL to the REST API service
         settingsURL="/umbraco/dff/dffapi/GetVaerkSettings?forsyningid="
-        result = requests.get(self._base_url + settingsURL + self._supplierid)
+        result = None
+        try:
+            result = requests.get(self._base_url + settingsURL + self._supplierid)
+        except requests.exceptions.RequestException:
+            raise HTTPFailed(result.raise_for_status())
+
         result_json = result.json()
-        api_server = result_json['AppServerUri']
+        self._api_server = result_json['AppServerUri']
 
-        _LOGGER.debug(f"Done getting api server {api_server}")
+        _LOGGER.debug(f"Done getting api server {self._api_server}")
 
-        return api_server
+        return True
 
     def _get_access_token(self):
         _LOGGER.debug(f"Getting access token")
 
-        if self._api_server == "":
-            self._api_server = self._get_api_server()
-
         # With the API server URL we can authenticate and get a token:
         security_token_url = self._api_server + "system/getsecuritytoken/project/app/consumer/" + self._username
-        result = requests.get(security_token_url)
-        result.raise_for_status()
+
+        result = None
+        try:
+            result = requests.get(security_token_url)
+        except requests.exceptions.RequestException as err:
+            raise LoginFailed(f"Failure on HTTP request during access token aquisition: {err}")
+            return False
 
         if result.status_code != 200:
-            _LOGGER.error("Not able to get access token.  Probably a wrong username.")
-            return False
+            raise LoginFailed("Not able to get access token. HTTP status: {result.status_code}.  Probably a wrong username.")
 
         result_json = result.json()
         token = result_json['Token']
-        ## TODO exception if token is '' (this happens if the username is invalid)
+        if token == '':
+            raise LoginFailed("Not able to get access token, it was empty.  Probably a wrong username.")
 
         hashed_password = hashlib.md5(self._password.encode()).hexdigest()
         crypt_string = hashed_password + token
         self._access_token = hashlib.md5(crypt_string.encode()).hexdigest()
         _LOGGER.debug(f"Got access token: {self._access_token}")
+
         return True
 
     def _login(self):
         # Use the new token to login to the API service
         auth_url = "system/login/project/app/consumer/"+self._username+"/installation/1/id/"
+        result = None
+        try:
+            result = requests.get(self._api_server + auth_url + self._access_token)
+        except requests.exceptions.RequestException:
+            raise HTTPFailed(result.raise_for_status())
 
-        result = requests.get(self._api_server + auth_url + self._access_token)
-        result.raise_for_status()
         result_json = result.json()
         result_status = result_json['Result']
         if result_status == 1:
             _LOGGER.debug("Login success")
         else:
-            _LOGGER.error("Login failed. Bye.")
-            return False
+            raise LoginFailed("Login failed. Bye.")
 
         return True
+
+    def authenticate(self):
+        """ Perform the login process:
+            First retrieve the API server, next get an access token, last use the token to authenticate.
+            If any of these raises an exception, login failed miserably.
+        """
+        try:
+            self._get_api_server()
+            self._get_access_token()
+            self._login()
+        except (LoginFailed, HTTPFailed) as err:
+            _LOGGER.error(err)
+            return False
 
     def _create_headers(self):
         return {
@@ -267,14 +292,6 @@ class Eforsyning:
         Get latest data.
         '''
         _LOGGER.debug(f"Getting latest data")
-
-        if not self._get_access_token():
-            _LOGGER.error("eForsyning could not get access token! (Don't call the API until next window)")
-            return None
-
-        if not self._login():
-            return None
-
         self._get_intallations()
 
         # Calculate the year parameter.  If the billing period is not skewed we
@@ -290,20 +307,12 @@ class Eforsyning:
                                          from_date=datetime.now()-timedelta(days=1),
                                          to_date=datetime.now())
 
-        if raw_data.status == 200:
-            json_response = json.loads(raw_data.body)
-
-            if self._is_water_supply == False:
-                result = self._parse_result_heating(json_response)
-            else:
-                result = self._parse_result_water(json_response)
-
-            #_LOGGER.debug(f"line 300 eforsyning.py: Result: {result}")
+        if self._is_water_supply == False:
+            result = self._parse_result_heating(raw_data)
         else:
-            result = None
-            #result = TimeSeries(raw_data.status, None, None, raw_data.body)
+            result = self._parse_result_water(raw_data)
 
-        _LOGGER.debug("Done getting latest data (status code:%d)", raw_data.status)
+        _LOGGER.debug("Done parsing latest data")
         return result
 
     def _stof(self, fstr, limit=None):
