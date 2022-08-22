@@ -138,6 +138,13 @@ class Eforsyning:
               Regardless of what we ask for, all data in the requested resolution
               (Year, Monthly, Daily) is returned.  This means requesting daily data
               will return an array of data from start of billing period to today's date.
+
+              "ForbrugsAfgraensning_FraAflaesning":"0|2|10"
+              "ForbrugsAfgraensning_TilAflaesning":"0|2|10"
+              
+              0  returns yearly reading
+              2  returns latest reading
+              10 returns reading per date
         '''
         _LOGGER.debug(f"Getting time series")
 
@@ -175,8 +182,8 @@ class Eforsyning:
                 "AarsMaerke":year,
                 "ForbrugsAfgraensning_FraDato":parsed_from_date,
                 "ForbrugsAfgraensning_TilDato":parsed_to_date,
-                "ForbrugsAfgraensning_FraAflaesning":"0",
-                "ForbrugsAfgraensning_TilAflaesning":"2",
+                "ForbrugsAfgraensning_FraAflaesning":"0", ## 0|2|10
+                "ForbrugsAfgraensning_TilAflaesning":"2", ## 0|2|10
                 "ForbrugsAfgraensning_MedtagMellemliggendeMellemaflas":include_data_in_between, ## true || false
 
                 "Optioner":"foBestemtBeboer, foSkabDetaljer, foMedtagWebAflaes",
