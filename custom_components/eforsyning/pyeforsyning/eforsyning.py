@@ -212,7 +212,7 @@ class Eforsyning:
         settingsURL="/umbraco/dff/dffapi/GetVaerkSettings?forsyningid="
         result = None
         try:
-            result = requests.get(self._base_url + settingsURL + self._supplierid)
+            result = requests.get(self._base_url + settingsURL + self._supplierid, headers=self._create_headers())
         except requests.exceptions.RequestException:
             raise HTTPFailed(result.raise_for_status())
 
@@ -231,7 +231,7 @@ class Eforsyning:
 
         result = None
         try:
-            result = requests.get(security_token_url)
+            result = requests.get(security_token_url, headers=self._create_headers())
         except requests.exceptions.RequestException as err:
             raise LoginFailed(f"Failure on HTTP request during access token aquisition: {err}")
             return False
@@ -256,7 +256,7 @@ class Eforsyning:
         auth_url = "system/login/project/app/consumer/"+self._username+"/installation/1/id/"
         result = None
         try:
-            result = requests.get(self._api_server + auth_url + self._access_token)
+            result = requests.get(self._api_server + auth_url + self._access_token, headers=self._create_headers())
         except requests.exceptions.RequestException:
             raise HTTPFailed(result.raise_for_status())
 
@@ -275,6 +275,7 @@ class Eforsyning:
             If any of these raises an exception, login failed miserably.
         """
         try:
+            self._x_session_id = ''.join(random.choice("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") for i in range(8))
             self._get_api_server()
             self._get_access_token()
             self._login()
@@ -284,8 +285,11 @@ class Eforsyning:
 
     def _create_headers(self):
         return {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'}
+                #'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-Session-ID': self._x_session_id,
+                'X-Correlation-ID': ''.join(random.choice("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") for i in range(8))
+                }
 
     def get_latest(self):
         '''

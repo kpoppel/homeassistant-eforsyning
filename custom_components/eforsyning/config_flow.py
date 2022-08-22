@@ -40,7 +40,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     # Returns True or False.  The API is not built for async operation
     # therefore it is wrapped in an async executor function.
     try:
-        api = Eforsyning(data["username"], data["password"], data["supplierid"], data["billing_period_skew"], data["is_Water_supply"])
+        api = Eforsyning(data["username"], data["password"], data["supplierid"], data["billing_period_skew"], data["is_water_supply"])
         await hass.async_add_executor_job(api.authenticate)
     except LoginFailed:
         raise InvalidAuth
