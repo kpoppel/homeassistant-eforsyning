@@ -282,6 +282,7 @@ class Eforsyning:
         except (LoginFailed, HTTPFailed) as err:
             _LOGGER.error(err)
             return False
+        return True
 
     def _create_headers(self):
         return {
