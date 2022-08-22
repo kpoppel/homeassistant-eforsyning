@@ -327,17 +327,24 @@ class Eforsyning:
         _LOGGER.debug("Done parsing latest data")
         return result
 
-    def _stof(self, fstr, limit=None):
+    def _stof(self, fstr, filter_above=None, scale=1):
         """Convert string with ',' string float to float.
            If the string is empty just return 0.0.
+           If the value is above the filter_above value, return 0.0
+           The scaling factor multiplies the value and rounds off to 3 decimals.
         """
         if fstr == "":
             return 0.0
 
         val = float(fstr.replace(',', '.'))
-        # Cull values above limit.  Some times data deliverd are missing decimal comma!
-        if limit and val > limit:
+        
+        # Cull values above filter_above.  Some times data deliverd are missing decimal comma!
+        if filter_above and val > filter_above:
             return 0.0
+
+        # Scale value removing float artifacts resulting in small decimal errors
+        val = round(val*scale, 3)
+
         return val
 
     def _parse_result_heating(self, result):
@@ -354,10 +361,19 @@ class Eforsyning:
         # Save all relevant day data so it can be extracted by users of the API (like HomeAssistant attributes)
         metering_data['data'] = []
         for fl in result['ForbrugsLinjer']['TForbrugsLinje']:
-            metering_data['temp-forward'] = self._stof(fl['Tempfrem'], limit=150)
-            metering_data['temp-return'] = self._stof(fl['TempRetur'], limit=150)
-            metering_data['temp-exp-return'] = self._stof(fl['Forv_Retur'], limit=150)
-            metering_data['temp-cooling'] = self._stof(fl['Afkoling'], limit=150)
+            metering_data['temp-forward'] = self._stof(fl['Tempfrem'], filter_above=150)
+            metering_data['temp-return'] = self._stof(fl['TempRetur'], filter_above=150)
+            metering_data['temp-exp-return'] = self._stof(fl['Forv_Retur'], filter_above=150)
+            metering_data['temp-cooling'] = self._stof(fl['Afkoling'], filter_above=150)
+
+            # Some may not have these fields.
+            metering_data['energy-eng2-start'] = None
+            metering_data['energy-eng2-end'] = None
+            metering_data['energy-eng2-used'] = None
+            metering_data['energy-tv2-start'] = None
+            metering_data['energy-tv2-end'] = None
+            metering_data['energy-tv2-used'] = None
+
             for reading in fl['TForbrugsTaellevaerk']:
                 unit = reading['Enhed_Txt']
                 #_LOGGER.debug(f"Energy use unit is: {unit}")
@@ -372,19 +388,19 @@ class Eforsyning:
                     metering_data['water-exp-used'] = self._stof(fl['ForventetForbrugM3'])
                     metering_data['water-exp-end'] = self._stof(fl['ForventetAflaesningM3'])
                 elif reading['IndexNavn'] == "ENG1":
-                    metering_data['energy-start'] = self._stof(reading['Start']) * multiplier
-                    metering_data['energy-end'] = self._stof(reading['Slut']) * multiplier
-                    metering_data['energy-used'] = self._stof(reading['Forbrug']) * multiplier
-                    metering_data['energy-exp-used'] = self._stof(fl['ForventetForbrugENG1']) * multiplier
-                    metering_data['energy-exp-end'] = self._stof(fl['ForventetAflaesningENG1']) * multiplier
+                    metering_data['energy-start'] = self._stof(reading['Start'], scale=multiplier)
+                    metering_data['energy-end'] = self._stof(reading['Slut'], scale=multiplier)
+                    metering_data['energy-used'] = self._stof(reading['Forbrug'], scale=multiplier)
+                    metering_data['energy-exp-used'] = self._stof(fl['ForventetForbrugENG1'], scale=multiplier)
+                    metering_data['energy-exp-end'] = self._stof(fl['ForventetAflaesningENG1'], scale=multiplier)
                 elif reading['IndexNavn'] == "ENG2":
-                    metering_data['energy-eng2-start'] = self._stof(reading['Start']) * multiplier
-                    metering_data['energy-eng2-end'] = self._stof(reading['Slut']) * multiplier
-                    metering_data['energy-eng2-used'] = self._stof(reading['Forbrug']) * multiplier
+                    metering_data['energy-eng2-start'] = self._stof(reading['Start'], scale=multiplier)
+                    metering_data['energy-eng2-end'] = self._stof(reading['Slut'], scale=multiplier)
+                    metering_data['energy-eng2-used'] = self._stof(reading['Forbrug'], filter_above=10000, scale=multiplier)
                 elif reading['IndexNavn'] == "TV2":
-                    metering_data['energy-tv2-start'] = self._stof(reading['Start']) * multiplier
-                    metering_data['energy-tv2-end'] = self._stof(reading['Slut']) * multiplier
-                    metering_data['energy-tv2-used'] = self._stof(reading['Forbrug']) * multiplier
+                    metering_data['energy-tv2-start'] = self._stof(reading['Start'], scale=multiplier)
+                    metering_data['energy-tv2-end'] = self._stof(reading['Slut'], scale=multiplier)
+                    metering_data['energy-tv2-used'] = self._stof(reading['Forbrug'], filter_above=10000, scale=multiplier)
                 else:
                     # This would be "TIME_"
                     metering_data['extra-start'] = self._stof(reading['Start'])
