@@ -165,6 +165,14 @@ class Eforsyning:
         if month or day:
             include_data_in_between = "true"
 
+        # If requesting data for a
+        # - monthly graph use afMaanedsvis
+        # - daily graph use afDagsvis
+        #
+        # For the field "AflaesningsUdjaevning" set to
+        # - true - if missing reading for a day, registered on the day after should be averaged on the days between the last good readings.
+        #          A missing reading will effectively double the readig on the next day (if the consumption is constant)
+        # - false - if missing readings should appear as zeroes - this could create a bumpt graph for daily readings.
         data_filter = "afMaanedsvis"
         data_average = "false"
         if day:
@@ -190,7 +198,7 @@ class Eforsyning:
                 "AHoejDetail":"false", ## true || false
 
                 "Aflaesningsfilter":data_filter, ## afMaanedsvis || afDagsvis || afUfiltreret
-                "AflaesningsFilterDag":"ULTIMO",
+                "AflaesningsFilterDag":"ULTIMO", ## PRIMO || ULTIMO (pick data on first or last day of the week or month)
                 "AflaesningsUdjaevning":data_average, ## true || false (Create interpolated data it seems)
 
                 "SletFiltreredeAflaesninger":"true", ## true || false (Get rid of filtered data?)
@@ -212,6 +220,34 @@ class Eforsyning:
         _LOGGER.debug(f"Done getting time series {result.status_code}, Body: {result.text}")
 
         return result.json()
+
+    def _get_billing_details(self):
+        ## Prices of the energy used can be fetched as well
+        # https://<server URL>/vaerksid>/api/getberegnregnskab?id=<id>&unr=<forbrugernummer>&anr=0&inr=<installationsnummer>
+        _LOGGER.debug(f"Getting billing details at supplier {self._supplierid}")
+        ## Get the URL to the REST API service
+        post_billing_data_url = "api/getberegnregnskab?id="+self._access_token+"&unr="+self._username+"&anr="+self._asset_id+"&inr="+self._installation_id # POST
+        headers = self._create_headers()
+        data = {
+                "aktivnr" : 0,
+                "beregnetVarmeRegnskab" : "faktisk"
+                }
+ 
+        _LOGGER.debug(f"POST to API")
+        result = None
+        try:
+            result = requests.post(self._api_server + post_billing_data_url,
+                                    data = json.dumps(data),
+                                    timeout = 5,
+                                    headers=headers
+                                )
+        except requests.exceptions.RequestException:
+            raise HTTPFailed(result.raise_for_status())
+
+        _LOGGER.debug(f"Done getting billing details {result.status_code}, Body: {result.text}")
+
+        return result.json()
+
 
     def _get_api_server(self):
         _LOGGER.debug(f"Getting api server at supplier {self._supplierid}")
@@ -321,11 +357,16 @@ class Eforsyning:
 
         if self._is_water_supply == False:
             result = self._parse_result_heating(raw_data)
+            # Handle data from the billing
+            billing_data = self._get_billing_details()
+            billing_result = self._parse_result_billing(billing_data)
         else:
             result = self._parse_result_water(raw_data)
+            # Pretty sure the billing record will *not* look the same for water data
+            billing_result = {}
 
         _LOGGER.debug("Done parsing latest data")
-        return result
+        return result | billing_result
 
     def _stof(self, fstr, filter_above=None, scale=1):
         """Convert string with ',' string float to float.
@@ -336,13 +377,14 @@ class Eforsyning:
         if fstr == "":
             return 0.0
 
-        val = float(fstr.replace(',', '.'))
+        # Remove thousand . and convert deciml , to . - then convert to float value
+        val = float(fstr.replace('.','').replace(',', '.'))
         
         # Cull values above filter_above.  Some times data deliverd are missing decimal comma!
         if filter_above and val > filter_above:
             return 0.0
 
-        # Scale value removing float artifacts resulting in small decimal errors
+        # Scale value and round value to remove float artifacts resulting in small decimal errors
         val = round(val*scale, 3)
 
         return val
@@ -350,6 +392,12 @@ class Eforsyning:
     def _parse_result_heating(self, result):
         '''
         Parse result from API call. This is a JSON dict.
+
+        The data fields ENG2 and TV2 is energy sent into the heating unit and energy returned to the network.
+        The unit is typically M3*T (volume * temperature).
+        The average incoming and outgoing temperatures can be calculated by ENG2/<today M3 consumption> and TV2/<today M3 consumption>
+        The cooling is then (ENG2-TV2)/<today M3 consumption>
+        These numbers are of little information value for the end-user as this is already available on ENG1.
         '''
         _LOGGER.debug(f"Parsing results - heating metering")
 
@@ -366,13 +414,19 @@ class Eforsyning:
             metering_data['temp-exp-return'] = self._stof(fl['Forv_Retur'], filter_above=150)
             metering_data['temp-cooling'] = self._stof(fl['Afkoling'], filter_above=150)
 
+            ## NOTE: No longer putting the ENG2 ans TV2 fields in the attributes.
+            ##       They are numbers for energy delivered and sent back supposedly in units of M3*T
+            ##       Hence dividing the number by M3 used the temperature in and out can be calculated.
+            ##       The numbers have no real meaning for tracking the consumption and just
+            ##       clutter the attributes.
+            ##       If you want them back, unceommen the relevant lines.
             # Some may not have these fields.
-            metering_data['energy-eng2-start'] = None
-            metering_data['energy-eng2-end'] = None
-            metering_data['energy-eng2-used'] = None
-            metering_data['energy-tv2-start'] = None
-            metering_data['energy-tv2-end'] = None
-            metering_data['energy-tv2-used'] = None
+            #metering_data['energy-eng2-start'] = None
+            #metering_data['energy-eng2-end'] = None
+            #metering_data['energy-eng2-used'] = None
+            #metering_data['energy-tv2-start'] = None
+            #metering_data['energy-tv2-end'] = None
+            #metering_data['energy-tv2-used'] = None
 
             for reading in fl['TForbrugsTaellevaerk']:
                 unit = reading['Enhed_Txt']
@@ -393,14 +447,14 @@ class Eforsyning:
                     metering_data['energy-used'] = self._stof(reading['Forbrug'], scale=multiplier)
                     metering_data['energy-exp-used'] = self._stof(fl['ForventetForbrugENG1'], scale=multiplier)
                     metering_data['energy-exp-end'] = self._stof(fl['ForventetAflaesningENG1'], scale=multiplier)
-                elif reading['IndexNavn'] == "ENG2":
-                    metering_data['energy-eng2-start'] = self._stof(reading['Start'], scale=multiplier)
-                    metering_data['energy-eng2-end'] = self._stof(reading['Slut'], scale=multiplier)
-                    metering_data['energy-eng2-used'] = self._stof(reading['Forbrug'], filter_above=10000, scale=multiplier)
-                elif reading['IndexNavn'] == "TV2":
-                    metering_data['energy-tv2-start'] = self._stof(reading['Start'], scale=multiplier)
-                    metering_data['energy-tv2-end'] = self._stof(reading['Slut'], scale=multiplier)
-                    metering_data['energy-tv2-used'] = self._stof(reading['Forbrug'], filter_above=10000, scale=multiplier)
+                #elif reading['IndexNavn'] == "ENG2":
+                #    metering_data['energy-eng2-start'] = self._stof(reading['Start'], scale=multiplier)
+                #    metering_data['energy-eng2-end'] = self._stof(reading['Slut'], scale=multiplier)
+                #    metering_data['energy-eng2-used'] = self._stof(reading['Forbrug'], filter_above=10000, scale=multiplier)
+                #elif reading['IndexNavn'] == "TV2":
+                #    metering_data['energy-tv2-start'] = self._stof(reading['Start'], scale=multiplier)
+                #    metering_data['energy-tv2-end'] = self._stof(reading['Slut'], scale=multiplier)
+                #    metering_data['energy-tv2-used'] = self._stof(reading['Forbrug'], filter_above=10000, scale=multiplier)
                 else:
                     # This would be "TIME_"
                     metering_data['extra-start'] = self._stof(reading['Start'])
@@ -428,13 +482,13 @@ class Eforsyning:
                 "Temp-ExpReturn" : metering_data['temp-exp-return'],
                 "Temp-Cooling" : metering_data['temp-cooling'],
 
-                "kWh-ENG2-Start" : metering_data['energy-eng2-start'],
-                "kWh-ENG2-End" : metering_data['energy-eng2-end'],
-                "kWh-ENG2-Used" : metering_data['energy-eng2-used'],
+                #"kWh-ENG2-Start" : metering_data['energy-eng2-start'],
+                #"kWh-ENG2-End" : metering_data['energy-eng2-end'],
+                #"kWh-ENG2-Used" : metering_data['energy-eng2-used'],
 
-                "kWh-TV2-Start" : metering_data['energy-tv2-start'],
-                "kWh-TV2-End" : metering_data['energy-tv2-end'],
-                "kWh-TV2-Used" : metering_data['energy-tv2-used'],
+                #"kWh-TV2-Start" : metering_data['energy-tv2-start'],
+                #"kWh-TV2-End" : metering_data['energy-tv2-end'],
+                #"kWh-TV2-Used" : metering_data['energy-tv2-used'],
             })
 
         _LOGGER.debug(f"Done parsing results")
@@ -483,6 +537,236 @@ class Eforsyning:
                 "ExpUsed" : metering_data['water-exp-used'],
                 "ExpEnd" : metering_data['water-exp-end'],
             })
+
+        _LOGGER.debug(f"Done parsing results")
+        return metering_data
+
+    def _parse_result_billing(self, result):
+        '''
+        Parse result from API call. This is a JSON dict.
+        In the JSON these are the data points:
+          faktlini[0..27].ekstra|enhedPris|linieType|antalEnheder|enhed|tekst|prisEnhed|opl4|opl3|opl2|opl1|ialt
+        
+        linieType = 0, 1, 3, 10, 12, 18, 20
+          0  = [13 lines] Skip - as only text
+          1  = [1 line] Fixed m3 contribution
+          3  = [5 lines] Looks related to consumtion data (MWh, prognosis on MWh and such)
+          10 = [1 line] Amount VAT
+          12 = [5 lines] Amounts related to totals and remaining payment incl./excl. VAT
+          18 = [2 lines] Amount already billed and amount in arrears (restance) (don't worry if this has a value - the report is drawn as if all payment should have been made)
+          20 = [1 line] Expected payment remainder of the billing year (= -<ammount arrears>)
+
+        Depending on the line, the remaining fields have or does not have a value.
+        In terms of sensors, the interesting data to pull out would be:
+          - Prognosis for MWh consumption
+          -
+
+        This:
+            idx[0]:
+                {
+                "ekstra": "kr.",
+                "enhedPris": "433,80",  <--- have this in attributes to calculate price
+                "linieType": "3",
+                "antalEnheder": "3,361",  <--- this is consumption year-to-date in MWh (energy-total-used)
+                "enhed": "MWh",
+                "tekst": "MWh",
+                "prisEnhed": "kr./MWh",
+                "opl4": "MWh",
+                "opl3": "19,560", <-- (a)
+                "opl2": "MWh",
+                "opl1": "16,199", <-- (b) : (b)-(a) == antalEnheder
+                "ialt": "1.458,00"   <--- this is price of MWh year-to-date in MWh
+                },
+
+            idx[1]
+                {
+                "ekstra": "",
+                "enhedPris": "",
+                "linieType": "3",
+                "antalEnheder": "108,66", <--- M3 used year-to-date (water-total-used)
+                "enhed": "M3",
+                "tekst": "",
+                "prisEnhed": "",
+                "opl4": "M3",
+                "opl3": "617,98", <--- meter reading now
+                "opl2": "M3",
+                "opl1": "509,32", <--- meter reading at start of billing period
+                "ialt": ""
+                },
+
+            idx[4]
+                {
+                "ekstra": "kr.",
+                "enhedPris": "433,80",
+                "linieType": "3",
+                "antalEnheder": "2,144", <--- this is the prognosis on MWh remainder of billing year (energy-use-prognosis (calculate as used+this number))
+                "enhed": "MWh",
+                "tekst": "Prognose: 27-08-2022 til 31-12-2022",
+                "prisEnhed": "kr./MWh",
+                "opl4": "",
+                "opl3": "",
+                "opl2": "",
+                "opl1": "",
+                "ialt": "930,07" <--- this is the price of that prognosis
+                },
+
+            idx[6]
+                {
+                "ekstra": "kr.",
+                "enhedPris": "",
+                "linieType": "12",
+                "antalEnheder": "",
+                "enhed": "",
+                "tekst": "Samlet varmeforbrug",
+                "prisEnhed": "",
+                "opl4": "",
+                "opl3": "",
+                "opl2": "",
+                "opl1": "",
+                "ialt": "2.388,07"  <--- total billing amount ytd+prognosis MWh
+                },
+
+            idx[7]
+                {
+                "ekstra": "kr.",
+                "enhedPris": "13,14",
+                "linieType": "1",
+                "antalEnheder": "170,25",  <--- prognosis on M3 use (water-use-prognosis)
+                "enhed": "m3",
+                "tekst": "Fastbidrag",
+                "prisEnhed": "kr./m3",
+                "opl4": "",
+                "opl3": "",
+                "opl2": "dage",
+                "opl1": "365",  <-- see, this is for the whole year...
+                "ialt": "2.237,09" <--- total billing based on the prognosis of M3 use
+                }
+
+            idx[10]
+                {
+                "ekstra": "kr.",
+                "enhedPris": "4.625,16",
+                "linieType": "10",
+                "antalEnheder": "25,00",
+                "enhed": "%",
+                "tekst": "Moms",
+                "prisEnhed": "kr.",
+                "opl4": "",
+                "opl3": "",
+                "opl2": "",
+                "opl1": "",
+                "ialt": "1.156,29" <--- total bill VAT amount
+                },
+
+            idx[12]
+                {
+                "ekstra": "kr.",
+                "enhedPris": "",
+                "linieType": "12",
+                "antalEnheder": "",
+                "enhed": "",
+                "tekst": "Total (incl.moms)",
+                "prisEnhed": "",
+                "opl4": "",
+                "opl3": "",
+                "opl2": "",
+                "opl1": "",
+                "ialt": "5.781,45"  <--- total bill (idx[6]+idx[7]+idx[10])
+                },
+
+            idx[13]
+                {
+                "ekstra": "kr.",
+                "enhedPris": "",
+                "linieType": "18",
+                "antalEnheder": "",
+                "enhed": "",
+                "tekst": "Tidl. opkrævet (incl. moms)",
+                "prisEnhed": "",
+                "opl4": "",
+                "opl3": "",
+                "opl2": "",
+                "opl1": "",
+                "ialt": "-4.770,00"  <--- amount already billed
+                },
+
+            idx[16]
+                {
+                "ekstra": "kr.",
+                "enhedPris": "",
+                "linieType": "18",
+                "antalEnheder": "",
+                "enhed": "",
+                "tekst": "Restance",
+                "prisEnhed": "",
+                "opl4": "",
+                "opl3": "",
+                "opl2": "",
+                "opl1": "",
+                "ialt": "1.590,00"  <--- amount arrears (how this number is calculated is not clear)
+                },                
+
+
+            idx[19]
+                {
+                "ekstra": "kr.",
+                "enhedPris": "",
+                "linieType": "12",
+                "antalEnheder": "",
+                "enhed": "",
+                "tekst": "Til indbetaling ",
+                "prisEnhed": "",
+                "opl4": "",
+                "opl3": "",
+                "opl2": "",
+                "opl1": "",
+                "ialt": "1.011,45"  <-- amount to be paid remainder of the year
+                },
+
+        Putting eveything together:
+        Sensors:
+         energy-total-used (idx[0][antalEnheder])
+         energy-use-prognosis (idx[0][antalEnheder]+idx[4][antalEnheder])
+         water-total-used (idx[1][antalEnheder])
+         water-use-prognosis (idx[7][antalEnheder])
+         amount-remaining (idx[19][ialt])
+
+         Attributes:
+           data_fetch_date (when the data was fetched)
+           MWh_Price  (idx[0][enhedPris])
+           M3_Price (idx[7][enhedPris])
+           Amount_MWh (idx[6][ialt])
+           Amount_M3 (idx[7][ialt])
+           Amount_VAT (idx[10][ialt])
+           Amount_Total (idx[12][ialt])
+           Amount_Paid (-idx[13][ialt])
+           Amount_Remaining (idx[19][ialt])
+        '''
+        _LOGGER.debug(f"Parsing results - billing")
+
+        # Only one field - which has an array of data
+        result = result['faktlini']
+
+        metering_data = {}
+        # Extract data from the latest data point
+        metering_data['energy-total-used'] = self._stof(result[0]['antalEnheder'])
+        metering_data['energy-use-prognosis'] =  metering_data['energy-total-used'] + self._stof(result[4]['antalEnheder'])
+        metering_data['water-total-used'] = self._stof(result[1]['antalEnheder'])
+        metering_data['water-use-prognosis'] = self._stof(result[7]['antalEnheder'])
+        metering_data['amount-remaining'] = self._stof(result[19]['ialt'])
+
+        # Save all relevant other data so it can be extracted by users of the API (like HomeAssistant attributes)
+        metering_data['billing'] = {
+            "Date": datetime.now().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+            "MWh-Price" : self._stof(result[0]['enhedPris']),
+            "M3-Price" : self._stof(result[7]['enhedPris']),
+            "Amount-MWh" : self._stof(result[6]['ialt']),
+            "Amount-M3" : self._stof(result[7]['ialt']),
+            "Amount-VAT" : self._stof(result[10]['ialt']),
+            "Amount-Total" : self._stof(result[12]['ialt']),
+            "Amount-Paid" : -self._stof(result[13]['ialt']),
+            "Amount-Remaining" : self._stof(result[19]['ialt']),
+        }
 
         _LOGGER.debug(f"Done parsing results")
         return metering_data

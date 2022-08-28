@@ -57,14 +57,18 @@ The names are hopefully self-explanatory:
 
 * energy-start
 * energy-end
-* energy-exp-end  (expected end value)
+* energy-exp-end  (expected end value that period)
 * energy-used
-* energy-exp-used (expected used value)
+* energy-exp-used (expected used value that period)
+* energy-total-used (total of used energy in the current billing period)
+* energy-use-prognosis (expected used value end of billing period)
 * water-start
 * water-end
-* water-exp_end
+* water-exp-end
 * water-used
-* water-exp_used
+* water-exp-used
+* water-total-used (total of used water in the current billing period)
+* water-use-prognosis (expected used value end of billing period)
 * temp-return
 * temp-exp-return
 * temp-cooling
@@ -74,28 +78,33 @@ Additionally all sensors have historical data available for use with for example
 
 As attribute data, the following is available:
 
-* DateFrom
-* DateTo
-* kWh-Start
-* kWh-End
-* kWh-Used
-* kWh-ExpUsed
-* kWh-ExpEnd
-* M3-Start
-* M3-End
-* M3-Used
-* M3-ExpUsed
-* M3-ExpEnd
-* Temp-Forward
-* Temp-Return
-* Temp-ExpReturn
-* Temp-Cooling
-* kWh-ENG2-Start
-* kWh-ENG2-End
-* kWh-ENG2-Used
-* kWh-TV2-Start
-* kWh-TV2-End
-* kWh-TV2-Used
+* Data
+  * DateFrom
+  * DateTo
+  * kWh-Start
+  * kWh-End
+  * kWh-Used
+  * kWh-ExpUsed
+  * kWh-ExpEnd
+  * M3-Start
+  * M3-End
+  * M3-Used
+  * M3-ExpUsed
+  * M3-ExpEnd
+  * Temp-Forward
+  * Temp-Return
+  * Temp-ExpReturn
+  * Temp-Cooling
+* Billing
+  * Date
+  * MWh-Price
+  * M3-Price
+  * Amount-MWh
+  * Amount-M3
+  * Amount-VAT
+  * Amount-Total
+  * Amount-Paid
+  * Amount-Remaining
 
 ### Sensors for water supply
 

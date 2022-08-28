@@ -21,7 +21,7 @@ from .const import DOMAIN
 
 from homeassistant.const import (TEMP_CELSIUS,
                                  DEVICE_CLASS_ENERGY, DEVICE_CLASS_TEMPERATURE,
-                                 DEVICE_CLASS_GAS,
+                                 DEVICE_CLASS_GAS, DEVICE_CLASS_MONETARY,
                                  ENERGY_KILO_WATT_HOUR, VOLUME_CUBIC_METERS)
 from homeassistant.components.sensor import (SensorEntity, STATE_CLASS_MEASUREMENT, STATE_CLASS_TOTAL,
                                             STATE_CLASS_TOTAL_INCREASING)
@@ -111,7 +111,7 @@ async def async_setup_entry(
             sensors.append(EforsyningSensor(f"{config.data['entityname']} Water {s}", "water", s, unique_id, coordinator))
     else:
         temp_series = {"forward", "return", "exp-return", "cooling"}
-        energy_series = {"start", "end", "used", "exp-used", "exp-end"}
+        energy_series = {"start", "end", "used", "exp-used", "exp-end", "total-used", "use-prognosis"}
 
         # It is recommended to use a truly unique ID when setting up sensors.  This one uses the entry_id because one could have
         # several accounts at the same supplier.  Also possible is to to use e.g. username+supplierid, but that gets kind of long.
@@ -124,6 +124,8 @@ async def async_setup_entry(
         for s in energy_series:
             sensors.append(EforsyningSensor(f"{config.data['entityname']} Water {s}", "water", s, unique_id, coordinator))
 
+    sensors.append(EforsyningSensor(f"{config.data['entityname']} Amount Remaining", "amount", "remaining", unique_id, coordinator))
+    
     async_add_entities(sensors)
 
 
@@ -166,10 +168,15 @@ class EforsyningSensor(CoordinatorEntity, SensorEntity):
             self._attr_state_class = STATE_CLASS_MEASUREMENT #STATE_CLASS_TOTAL
             # Only gas can be measured in m3
             self._attr_device_class = DEVICE_CLASS_GAS
-        else:
+        elif sensor_type == "temp":
             self._attr_native_unit_of_measurement = TEMP_CELSIUS
             self._attr_icon = "mdi:thermometer"
             self._attr_device_class = DEVICE_CLASS_TEMPERATURE
+            self._attr_state_class = STATE_CLASS_MEASUREMENT
+        else:
+            self._attr_native_unit_of_measurement = "kr"
+            self._attr_icon = "mdi:cash-100"
+            self._attr_device_class = DEVICE_CLASS_MONETARY
             self._attr_state_class = STATE_CLASS_MEASUREMENT
 
     @property
@@ -177,6 +184,7 @@ class EforsyningSensor(CoordinatorEntity, SensorEntity):
         """Return extra state attributes."""
         if self._sensor_data:
             self._attrs["data"] = self._sensor_data["data"]
+            self._attrs["billing"] = self._sensor_data["billing"]
         else:
             self._attrs = {}
         return self._attrs
