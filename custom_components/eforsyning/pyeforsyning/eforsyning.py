@@ -523,10 +523,15 @@ class Eforsyning:
         for fl in result['ForbrugsLinjer']['TForbrugsLinje']:
             metering_data['water-exp-used'] = self._stof(fl['ForventetForbrugM3'])
             metering_data['water-exp-end'] = self._stof(fl['ForventetAflaesningM3'])
+            # Initialise data - just in case data is missing - which would be really weird
+            metering_data['water-start'] = 0.0
+            metering_data['water-end'] = 0.0
+            metering_data['water-used'] = 0.0
             for reading in fl['TForbrugsTaellevaerk']:
-                metering_data['water-start'] = self._stof(reading['Start'])
-                metering_data['water-end'] = self._stof(reading['Slut'])
-                metering_data['water-used'] = self._stof(reading['Forbrug'])
+                if reading['IndexNavn'] == "M3":
+                    metering_data['water-start'] = self._stof(reading['Start'])
+                    metering_data['water-end'] = self._stof(reading['Slut'])
+                    metering_data['water-used'] = self._stof(reading['Forbrug'])
 
             metering_data['data'].append({
                 "DateFrom" : datetime.strptime(fl["FraDatoStr"], "%d-%m-%Y").strftime("%Y-%m-%dT%H:%M:%S.000Z"),
