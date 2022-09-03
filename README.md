@@ -79,8 +79,7 @@ Additionally all sensors have historical data available for use with for example
 As attribute data, the following is available:
 
 * Data
-  * DateFrom
-  * DateTo
+  * Date
   * kWh-Start
   * kWh-End
   * kWh-Used
@@ -106,6 +105,8 @@ As attribute data, the following is available:
   * Amount-Paid
   * Amount-Remaining
 
+You will see these attributes as pairs of (date, value).
+
 ### Sensors for water supply
 
 A different set of sensors are created, 8 in total.  The naming scheme is `sensor.eforsyning.<name>`. (Unless you changed the "eforsyning" name).
@@ -121,13 +122,14 @@ A different set of sensors are created, 8 in total.  The naming scheme is `senso
 
 As attributes the following data is available:
 
-* DateFrom
-* DateTo
+* Date
 * Start
 * End
 * Used
 * ExpUsed
 * ExpEnd
+
+You will see these attributes as pairs of (date, value).
 
 ## Debugging
 ---
@@ -205,13 +207,13 @@ series:
     type: area
     data_generator: |
       return entity.attributes.data.map((start, index) => {
-        return [new Date(start["DateFrom"]).getTime(), entity.attributes.data[index]["End"]];
+        return [new Date(start["date"]).getTime(), entity.attributes.data[index]["value"]];
       });
   - entity: sensor.mitvand_water_exp_used
     type: area
     data_generator: |
       return entity.attributes.data.map((start, index) => {
-        return [new Date(start["DateFrom"]).getTime(), entity.attributes.data[index]["ExpEnd"]];
+        return [new Date(start["date"]).getTime(), entity.attributes.data[index]["value"]];
       });
 
 ```
@@ -248,12 +250,12 @@ series:
     type: area
     data_generator: |
       return entity.attributes.data.map((start, index) => {
-        return [new Date(start["DateFrom"]).getTime(), entity.attributes.data[index]["kWh-Used"]];
+        return [new Date(start["date"]).getTime(), entity.attributes.data[index]["value"]];
       });
   - entity: sensor.eforsyning_energy_exp_used
     type: area
     data_generator: |
       return entity.attributes.data.map((start, index) => {
-        return [new Date(start["DateFrom"]).getTime(), entity.attributes.data[index]["kWh-ExpUsed"]];
+        return [new Date(start["date"]).getTime(), entity.attributes.data[index]["value"]];
       });
 ```
