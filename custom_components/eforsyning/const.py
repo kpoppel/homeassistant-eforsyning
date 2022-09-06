@@ -239,7 +239,7 @@ WATER_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
         device_class = DEVICE_CLASS_GAS,
         icon = "mdi:water",
         state_class = STATE_CLASS_MEASUREMENT,
-        attribute_data = "M3-"
+        attribute_data = "Start"
     ),
     EforsyningSensorDescription(
         key = "water-end",
@@ -249,7 +249,7 @@ WATER_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
         device_class = DEVICE_CLASS_GAS,
         icon = "mdi:water",
         state_class = STATE_CLASS_MEASUREMENT,
-        attribute_data = "M3-"
+        attribute_data = "End"
     ),
     EforsyningSensorDescription(
         key = "water-used",
@@ -259,7 +259,7 @@ WATER_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
         device_class = DEVICE_CLASS_GAS,
         icon = "mdi:water",
         state_class = STATE_CLASS_MEASUREMENT,
-        attribute_data = "M3-"
+        attribute_data = "Used"
     ),
     EforsyningSensorDescription(
         key = "water-exp-used",
@@ -269,7 +269,7 @@ WATER_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
         device_class = DEVICE_CLASS_GAS,
         icon = "mdi:water",
         state_class = STATE_CLASS_MEASUREMENT,
-        attribute_data = "M3-"
+        attribute_data = "ExpUsed"
     ),
     EforsyningSensorDescription(
         key = "water-exp-end",
@@ -279,7 +279,7 @@ WATER_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
         device_class = DEVICE_CLASS_GAS,
         icon = "mdi:water",
         state_class = STATE_CLASS_MEASUREMENT,
-        attribute_data = "M3-"
+        attribute_data = "ExpEnd"
     ),
     EforsyningSensorDescription(
         key = "water-ytd-used",
@@ -289,7 +289,7 @@ WATER_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
         device_class = DEVICE_CLASS_GAS,
         icon = "mdi:water",
         state_class = STATE_CLASS_MEASUREMENT,
-        attribute_data = "M3-"
+        attribute_data = None
     ),
     EforsyningSensorDescription(
         key = "water-exp-ytd-used",
@@ -299,7 +299,7 @@ WATER_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
         device_class = DEVICE_CLASS_GAS,
         icon = "mdi:water",
         state_class = STATE_CLASS_MEASUREMENT,
-        attribute_data = "M3-"
+        attribute_data = None
     ),
     EforsyningSensorDescription(
         key = "water-exp-fy-used",
@@ -309,7 +309,7 @@ WATER_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
         device_class = DEVICE_CLASS_GAS,
         icon = "mdi:water",
         state_class = STATE_CLASS_MEASUREMENT,
-        attribute_data = "M3-"
+        attribute_data = None
     ),
 )
 
