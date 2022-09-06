@@ -752,6 +752,21 @@ class Eforsyning:
         # Only one field - which has an array of data
         result = result['faktlini']
 
+        # Make a check for the billing data returned actually looks like something it can parse
+        # If not, make a log entry to please submit the data to get the plugin updated.
+        if len(result) < 27 or result[19]['tekst'] != "Til indbetaling " or result[7]['tekst'] != "Fastbidrag":
+            _LOGGER.warning("Could not understand billing data.  Please submit an issue with the data below on the integration github after anonymising data as you see fit:\nhttps://github.com/kpoppel/homeassistant-eforsyning/issues\n%s", result)
+            metering_data = {
+                'billing': None,
+                'energy-total-used': None, 
+                'energy-use-prognosis': None,
+                'water-total-used': None,
+                'water-use-prognosis': None,
+                'amount-remaining': None
+            }
+            return metering_data
+
+
         metering_data = {}
         # Extract data from the latest data point
         metering_data['energy-total-used'] = self._stof(result[0]['antalEnheder'])
