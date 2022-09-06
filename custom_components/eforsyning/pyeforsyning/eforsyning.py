@@ -214,6 +214,10 @@ class Eforsyning:
                                     timeout = 5,
                                     headers=headers
                                 )
+        except requests.exceptions.Timeout:
+            _LOGGER.warning(f"API access timed out.  No data retrieved")
+            return result
+
         except requests.exceptions.RequestException:
             raise HTTPFailed(result.raise_for_status())
 
@@ -355,18 +359,22 @@ class Eforsyning:
                                          from_date=datetime.now()-timedelta(days=1),
                                          to_date=datetime.now())
 
-        if self._is_water_supply == False:
-            result = self._parse_result_heating(raw_data)
-            # Handle data from the billing
-            billing_data = self._get_billing_details()
-            billing_result = self._parse_result_billing(billing_data)
-        else:
-            result = self._parse_result_water(raw_data)
-            # Pretty sure the billing record will *not* look the same for water data
-            billing_result = {}
+        # if there is a connection error, no data is returned, so don't try to parse it.
+        if raw_data:
+            if self._is_water_supply == False:
+                result = self._parse_result_heating(raw_data)
+                # Handle data from the billing
+                billing_data = self._get_billing_details()
+                billing_result = self._parse_result_billing(billing_data)
+            else:
+                result = self._parse_result_water(raw_data)
+                # Pretty sure the billing record will *not* look the same for water data
+                billing_result = {}
 
-        _LOGGER.debug("Done parsing latest data")
-        return result | billing_result
+            _LOGGER.debug("Done parsing latest data")
+            return result | billing_result
+        else:
+            return None
 
     def _stof(self, fstr, filter_above=None, scale=1):
         """Convert string with ',' string float to float.

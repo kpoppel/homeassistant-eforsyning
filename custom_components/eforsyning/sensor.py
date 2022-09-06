@@ -156,17 +156,17 @@ class EforsyningSensor(CoordinatorEntity, SensorEntity):
         """Return extra state attributes.
            Filter attributes so they are relevant for the individual sensor.
         """
-        if self.entity_description.key == "amount-remaining":
-            self._attrs["data"] = self._sensor_data["billing"]
-        elif self.entity_description.attribute_data:
-            self._attrs["data"] = []
-            for data_point in self._sensor_data["data"]:
-                self._attrs["data"].append({
-                    "date" : data_point["DateTo"],
-                    "value" : data_point[self.entity_description.attribute_data],
-                })
-        else:
-            self._attrs = {}
+        self._attrs = {}
+        if self._sensor_data:
+            if self.entity_description.key == "amount-remaining":
+                self._attrs["data"] = self._sensor_data["billing"]
+            elif self.entity_description.attribute_data:
+                self._attrs["data"] = []
+                for data_point in self._sensor_data["data"]:
+                    self._attrs["data"].append({
+                        "date" : data_point["DateTo"],
+                        "value" : data_point[self.entity_description.attribute_data],
+                    })
 
         return self._attrs
 
