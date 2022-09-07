@@ -764,20 +764,22 @@ class Eforsyning:
         # Only one field - which has an array of data
         result = result['faktlini']
 
-        mwh_prognosis = 0.0
-        mwh_price = 0.0
-        mwh_total_used = 0.0
-        mwh_total_used_price = 0.0
+        energy_prognosis = 0.0
+        energy_price = 0.0
+        energy_total_used = 0.0
+        energy_total_used_price = 0.0
         m3_prognosis = 0.0
         m3_price = 0.0
         m3_total_used = 0.0
         m3_prognosis_price = 0.0
         m3_prognosis_price = 0.0
         amount_vat = 0.0
-        amount_mwh = 0.0
+        amount_energy = 0.0
         amount_total = 0.0
         amount_advance = 0.0
         amount_remaining = 0.0
+
+        multiplier = 1000 # scaling factor to kWh frm MWh
 
         for record in result:
             if record['linieType'] == "0":
@@ -795,19 +797,19 @@ class Eforsyning:
                     continue
                 elif "Prognose" in record['tekst']:
                     if record['enhed'] == "MWh":
-                        # Prognosis heating in MWh
-                        mwh_prognosis = self._stof(record['antalEnheder'])
+                        # Prognosis heating in MWh scaled to kWh
+                        energy_prognosis = self._stof(record['antalEnheder'], scale=multiplier)
                         continue
                     else:
                         # Not a prognosis in MWh - not used (and not seen in data so far)
                         continue
                 elif record['enhed'] == "MWh":
-                    # Price of comsumption in MWh.
+                    # Price of comsumption of energy.
                     # If there are more records like these, it would seen the price may have been adjusted.
                     # Calculate the average MWh price in that case.
-                    mwh_total_used_price += self._stof(record['ialt'])
-                    mwh_total_used += self._stof(record['antalEnheder'])
-                    mwh_price = round(mwh_total_used_price/mwh_total_used, 2)
+                    energy_total_used_price += self._stof(record['ialt'])
+                    energy_total_used += self._stof(record['antalEnheder'], scale=multiplier)
+                    energy_price = round(multiplier*energy_total_used_price/energy_total_used, 2)
                     continue
                 elif record['enhed'] == "M3":
                     # Consumption in M3 (water passed through the system)
@@ -823,7 +825,7 @@ class Eforsyning:
             elif record['linieType'] == "12":
                 if record['tekst'] == "Samlet varmeforbrug":
                     # Price of MWh totalled
-                    amount_mwh = self._stof(record['ialt'])
+                    amount_energy = self._stof(record['ialt'])
                     continue
                 elif record['tekst'] == "Total (incl.moms)":
                     # Price totalled incl. VAT
@@ -851,8 +853,8 @@ class Eforsyning:
                 continue
 
         metering_data = {}
-        metering_data['energy-total-used'] = mwh_total_used
-        metering_data['energy-use-prognosis'] =  mwh_total_used + mwh_prognosis
+        metering_data['energy-total-used'] = energy_total_used
+        metering_data['energy-use-prognosis'] =  energy_total_used + energy_prognosis
         metering_data['water-total-used'] = m3_total_used
         metering_data['water-use-prognosis'] = m3_prognosis
         metering_data['amount-remaining'] = amount_remaining
@@ -860,9 +862,9 @@ class Eforsyning:
         # Save all relevant other data so it can be extracted by users of the API (like HomeAssistant attributes)
         metering_data['billing'] = {
             "Date": datetime.now().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-            "MWh-Price" : mwh_price,
+            "MWh-Price" : energy_price,
             "M3-Price" : m3_price,
-            "Amount-MWh" : amount_mwh,
+            "Amount-MWh" : amount_energy,
             "Amount-M3" : m3_prognosis_price,
             "Amount-VAT" : amount_vat,
             "Amount-Total" : amount_total,
