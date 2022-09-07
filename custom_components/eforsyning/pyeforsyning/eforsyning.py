@@ -831,10 +831,12 @@ class Eforsyning:
                     # Price totalled incl. VAT
                     amount_total = self._stof(record['ialt'])
                     continue
-                elif "Til udbetaling" in record['tekst'] or "Til indbetaling" in record['tekst']:
-                    # Remaining expected payment or remuneration (always positive nomber)
-                    # Todo: Maybe this is the wrong metric as it seems to be alwas a positive number regardless if
-                    #       if it is payment or remuneration.
+                elif "Til udbetaling" in record['tekst'] :
+                    # Remaining expected remuneration (indicated by a negative number)
+                    amount_remaining = -self._stof(record['ialt'])
+                    continue
+                elif "Til indbetaling" in record['tekst']:
+                    # Remaining expected payment (indicated by a positive number)
                     amount_remaining = self._stof(record['ialt'])
                     continue
                 else:
