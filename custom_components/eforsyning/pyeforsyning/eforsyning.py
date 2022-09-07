@@ -248,8 +248,8 @@ class Eforsyning:
         except requests.exceptions.RequestException:
             raise HTTPFailed(result.raise_for_status())
 
-        _LOGGER.debug(f"Done getting billing details {result.status_code}, Body: {result.text}")
-
+        _LOGGER.debug(f"Done getting billing details {result.status_code}") #, Body: {result.text}")
+        _LOGGER.debug(json.dumps(result.json(), sort_keys = False, indent = 4))
         return result.json()
 
 
@@ -574,6 +574,10 @@ class Eforsyning:
           - Prognosis for MWh consumption
           -
 
+        There is another format with only [0..15] lines of information, with records in a different order.
+        This basically means the parser cannot rely on specific indices but need to inder the records from other
+        properties instead.
+
         This:
             idx[0]:
                 {
@@ -760,40 +764,110 @@ class Eforsyning:
         # Only one field - which has an array of data
         result = result['faktlini']
 
-        # Make a check for the billing data returned actually looks like something it can parse
-        # If not, make a log entry to please submit the data to get the plugin updated.
-        if len(result) < 27 or result[19]['tekst'] != "Til indbetaling " or result[7]['tekst'] != "Fastbidrag":
-            _LOGGER.warning("Could not understand billing data.  Please submit an issue with the data below on the integration github after anonymising data as you see fit:\nhttps://github.com/kpoppel/homeassistant-eforsyning/issues\n%s", result)
-            metering_data = {
-                'billing': None,
-                'energy-total-used': None, 
-                'energy-use-prognosis': None,
-                'water-total-used': None,
-                'water-use-prognosis': None,
-                'amount-remaining': None
-            }
-            return metering_data
+        mwh_prognosis = 0.0
+        mwh_price = 0.0
+        mwh_total_used = 0.0
+        mwh_total_used_price = 0.0
+        m3_prognosis = 0.0
+        m3_price = 0.0
+        m3_total_used = 0.0
+        m3_prognosis_price = 0.0
+        m3_prognosis_price = 0.0
+        amount_vat = 0.0
+        amount_mwh = 0.0
+        amount_total = 0.0
+        amount_advance = 0.0
+        amount_remaining = 0.0
 
+        for record in result:
+            if record['linieType'] == "0":
+                continue
+            elif record['linieType'] == "1":
+                # Fixed payment - differences here, some have a unit price
+                m3_prognosis_price = self._stof(record['ialt'])
+                if record['enhed'] == "m3":
+                    m3_prognosis = self._stof(record['antalEnheder'])
+                    m3_price = round(m3_prognosis_price/m3_prognosis, 2)
+                continue
+            elif record['linieType'] == "3":
+                if "Afkøling" in record['tekst']:
+                    # Average cooling - not used
+                    continue
+                elif "Prognose" in record['tekst']:
+                    if record['enhed'] == "MWh":
+                        # Prognosis heating in MWh
+                        mwh_prognosis = self._stof(record['antalEnheder'])
+                        continue
+                    else:
+                        # Not a prognosis in MWh - not used (and not seen in data so far)
+                        continue
+                elif record['enhed'] == "MWh":
+                    # Price of comsumption in MWh.
+                    # If there are more records like these, it would seen the price may have been adjusted.
+                    # Calculate the average MWh price in that case.
+                    mwh_total_used_price += self._stof(record['ialt'])
+                    mwh_total_used += self._stof(record['antalEnheder'])
+                    mwh_price = round(mwh_total_used_price/mwh_total_used, 2)
+                    continue
+                elif record['enhed'] == "M3":
+                    # Consumption in M3 (water passed through the system)
+                    m3_total_used += self._stof(record['antalEnheder'])
+                    continue
+                else:
+                    # Something else
+                    continue
+            elif record['linieType'] == "10":
+                # Amount VAT
+                amount_vat = self._stof(record['ialt'])
+                continue
+            elif record['linieType'] == "12":
+                if record['tekst'] == "Samlet varmeforbrug":
+                    # Price of MWh totalled
+                    amount_mwh = self._stof(record['ialt'])
+                    continue
+                elif record['tekst'] == "Total (incl.moms)":
+                    # Price totalled incl. VAT
+                    amount_total = self._stof(record['ialt'])
+                    continue
+                elif "Til udbetaling" in record['tekst'] or "Til indbetaling" in record['tekst']:
+                    # Remaining expected payment or remuneration (always positive nomber)
+                    # Todo: Maybe this is the wrong metric as it seems to be alwas a positive number regardless if
+                    #       if it is payment or remuneration.
+                    amount_remaining = self._stof(record['ialt'])
+                    continue
+                else:
+                    # Comething else, like amount excl. VAT, too much paid, too little paid - not used
+                    continue
+            elif record['linieType'] == "18":
+                if "Restance" in record['tekst']:
+                    continue
+                else:
+                    # Advance payments (negative number in the report)
+                    amount_advance = -self._stof(record['ialt'])
+                    continue
+            elif record['linieType'] == "20":
+                # Expected future payments (positive), or paid-back (negative)
+                # Not used
+                continue
 
         metering_data = {}
-        # Extract data from the latest data point
-        metering_data['energy-total-used'] = self._stof(result[0]['antalEnheder'])
-        metering_data['energy-use-prognosis'] =  metering_data['energy-total-used'] + self._stof(result[4]['antalEnheder'])
-        metering_data['water-total-used'] = self._stof(result[1]['antalEnheder'])
-        metering_data['water-use-prognosis'] = self._stof(result[7]['antalEnheder'])
-        metering_data['amount-remaining'] = self._stof(result[19]['ialt'])
+        metering_data['energy-total-used'] = mwh_total_used
+        metering_data['energy-use-prognosis'] =  mwh_total_used + mwh_prognosis
+        metering_data['water-total-used'] = m3_total_used
+        metering_data['water-use-prognosis'] = m3_prognosis
+        metering_data['amount-remaining'] = amount_remaining
 
         # Save all relevant other data so it can be extracted by users of the API (like HomeAssistant attributes)
         metering_data['billing'] = {
             "Date": datetime.now().strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-            "MWh-Price" : self._stof(result[0]['enhedPris']),
-            "M3-Price" : self._stof(result[7]['enhedPris']),
-            "Amount-MWh" : self._stof(result[6]['ialt']),
-            "Amount-M3" : self._stof(result[7]['ialt']),
-            "Amount-VAT" : self._stof(result[10]['ialt']),
-            "Amount-Total" : self._stof(result[12]['ialt']),
-            "Amount-Paid" : -self._stof(result[13]['ialt']),
-            "Amount-Remaining" : self._stof(result[19]['ialt']),
+            "MWh-Price" : mwh_price,
+            "M3-Price" : m3_price,
+            "Amount-MWh" : amount_mwh,
+            "Amount-M3" : m3_prognosis_price,
+            "Amount-VAT" : amount_vat,
+            "Amount-Total" : amount_total,
+            "Amount-Paid" : amount_advance,
+            "Amount-Remaining" : amount_remaining,
         }
 
         _LOGGER.debug(f"Done parsing results")
