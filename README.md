@@ -73,6 +73,7 @@ The names are hopefully self-explanatory:
 * temp-exp-return
 * temp-cooling
 * temp-forward
+* amount-remaining
 
 Additionally all sensors have historical data available for use with for example ApexChart.  This data is not saved to the database and it only exists on the latest data point.  The historical data exists because the integration fetches all data for the full billing year to avoid averaging on the data points.
 
@@ -106,6 +107,22 @@ As attribute data, the following is available:
   * Amount-Remaining
 
 You will see these attributes as pairs of (date, value).
+
+#### Understanding the Billing Amount Remaining attribute
+
+In the data returned from the API, a number not displayed elsewhere exists.  This is the sensor value of the amount-remaining sensor too. The current understanding of this number seems to be this: The daily account of advance payments vs. expected consumption minus actual consumption.  The returned data is always a positive number but with the text "Til indbetalng" or "Til udbetaling".  The integration adopts a sign convention like this to express it as a sensor value:
+
+  Amount Remaining > 0 and increasing: I used more than current advance payments and keep using more than expected
+  Amount Remaining > 0 and decreasing:  I used more than current advance payments and keep using less than expected
+
+vice versa
+
+  Amount Remaining < 0 and increasing:  I used less than current advance payments and keep using less than expected
+  Amount Remaining < 0 and decreasing:  I used less than current advance payments and keep using more than expected
+
+(an increasing negative number becomes more negative, and a decreasing negative number becomes less negative)
+
+In other words, if the sensor value keeps getting less and less positive (consequently more and more negative), you are on the right track to save energy.  You may also notice the number changing from positive to negative across an advance payment, because that payment exceeded the actual expected remaining amount due.
 
 ### Sensors for water supply
 
