@@ -112,13 +112,13 @@ You will see these attributes as pairs of (date, value).
 
 In the data returned from the API, a number not displayed elsewhere exists.  This is the sensor value of the amount-remaining sensor too. The current understanding of this number seems to be this: The daily account of advance payments vs. expected consumption minus actual consumption.  The returned data is always a positive number but with the text "Til indbetalng" or "Til udbetaling".  The integration adopts a sign convention like this to express it as a sensor value:
 
-  Amount Remaining > 0 and increasing: I used more than current advance payments and keep using more than expected
-  Amount Remaining > 0 and decreasing:  I used more than current advance payments and keep using less than expected
+    Amount Remaining > 0 and increasing: I used more than current advance payments and keep using more than expected
+    Amount Remaining > 0 and decreasing:  I used more than current advance payments and keep using less than expected
 
 vice versa
 
-  Amount Remaining < 0 and increasing:  I used less than current advance payments and keep using less than expected
-  Amount Remaining < 0 and decreasing:  I used less than current advance payments and keep using more than expected
+    Amount Remaining < 0 and increasing:  I used less than current advance payments and keep using less than expected
+    Amount Remaining < 0 and decreasing:  I used less than current advance payments and keep using more than expected
 
 (an increasing negative number becomes more negative, and a decreasing negative number becomes less negative)
 
