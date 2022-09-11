@@ -156,7 +156,7 @@ It is possible to debug log the raw response from eforsyning.dk API. This is don
 logger: 
   default: info
   logs: 
-    pyeforsyning.eforsyning: debug
+    custom_components.eforsyning: debug
 ```
 
 ## Examples
