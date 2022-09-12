@@ -148,8 +148,7 @@ class EforsyningSensor(CoordinatorEntity, SensorEntity):
         my_uuid = str(uuid.uuid3(uuid.NAMESPACE_URL, f"{config.data['username']}-{config.data['supplierid']}"))
         self._attr_unique_id = f"eforsyning-{my_uuid}-{description.key}"
 
-        # Data is resolved from here - relies on the fact that first sync is successful:
-        self.coordinator.data = coordinator.data #[self.entity_description.key]
+        # Note: Data is stored in self.coordinator.data
 
     @property
     def extra_state_attributes(self):
