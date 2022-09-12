@@ -149,7 +149,7 @@ class EforsyningSensor(CoordinatorEntity, SensorEntity):
         self._attr_unique_id = f"eforsyning-{my_uuid}-{description.key}"
 
         # Data is resolved from here - relies on the fact that first sync is successful:
-        self._sensor_data = coordinator.data #[self.entity_description.key]
+        self.coordinator.data = coordinator.data #[self.entity_description.key]
 
     @property
     def extra_state_attributes(self):
@@ -157,12 +157,12 @@ class EforsyningSensor(CoordinatorEntity, SensorEntity):
            Filter attributes so they are relevant for the individual sensor.
         """
         self._attrs = {}
-        if self._sensor_data:
+        if self.coordinator.data:
             if self.entity_description.key == "amount-remaining":
-                self._attrs["data"] = self._sensor_data["billing"]
+                self._attrs["data"] = self.coordinator.data["billing"]
             elif self.entity_description.attribute_data:
                 self._attrs["data"] = []
-                for data_point in self._sensor_data["data"]:
+                for data_point in self.coordinator.data["data"]:
                     self._attrs["data"].append({
                         "date" : data_point["DateTo"],
                         "value" : data_point[self.entity_description.attribute_data],
@@ -172,7 +172,7 @@ class EforsyningSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def native_value(self) -> StateType:
-        if self._sensor_data:
-            return cast(float, self._sensor_data[self.entity_description.key])
+        if self.coordinator.data:
+            return cast(float, self.coordinator.data[self.entity_description.key])
         else:
             return None
