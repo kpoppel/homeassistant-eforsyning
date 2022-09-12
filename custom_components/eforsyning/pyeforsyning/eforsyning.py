@@ -831,7 +831,7 @@ class Eforsyning:
                     # Price totalled incl. VAT
                     amount_total = self._stof(record['ialt'])
                     continue
-                elif "Til udbetaling" in record['tekst'] :
+                elif record['tekst'] in "Til udbetaling|Tilbagebetaling":
                     # Remaining expected remuneration (indicated by a negative number)
                     amount_remaining = -self._stof(record['ialt'])
                     continue
