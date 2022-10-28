@@ -159,6 +159,8 @@ class EforsyningSensor(CoordinatorEntity, SensorEntity):
         if self.coordinator.data:
             if self.entity_description.key == "amount-remaining":
                 self._attrs["data"] = self.coordinator.data["billing"]
+            elif self.entity_description.key == "temp-return-year":
+                self._attrs["data"] = self.coordinator.data["year"]
             elif self.entity_description.attribute_data:
                 self._attrs["data"] = []
                 for data_point in self.coordinator.data["data"]:

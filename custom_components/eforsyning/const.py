@@ -82,6 +82,21 @@ HEATING_TEMP_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
         state_class = STATE_CLASS_MEASUREMENT,
         attribute_data = "Temp-Cooling"
     ),
+
+    # Yearly sensors
+    #-----------------
+    # TODO: Note that this sensor will pull data froma dataset where cooling, expected values and more is present both for temperature, energy and water
+    #       Improvement could be to add all of these sensors as well.  Another one to disable least used sensors by default (but which ones are they?)
+    EforsyningSensorDescription(
+        key = "temp-return-year",
+        name = "Water Temperature return year-to-date",
+        entity_registry_enabled_default = True,
+        native_unit_of_measurement = TEMP_CELSIUS,
+        device_class = DEVICE_CLASS_TEMPERATURE,
+        icon = "mdi:thermometer",
+        state_class = STATE_CLASS_MEASUREMENT,
+        attribute_data = None
+    ),
 )
 
 HEATING_ENERGY_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (

@@ -37,14 +37,18 @@ class Eforsyning:
         ## and iterate over them.
         ## Must be a string - see where it is used.
         self._asset_id = "1"
+        self._user_id = None
+        self._first_year = None
         self._installation_id = "1"
         self._access_token = ""
 
-    def _get_ebrugerid(self):
+    def _get_ebrugerinfo(self):
         '''
         This method returns the "ebrugerid" which is different from the username.
         This id is used to get the installations.
         Parameter "id" in the returned data is the ebrugerid
+        Parameter "indflyttet" is the date the consumer was registered on the address.  It is useful when retrieving yearly data
+          so that data is not retrieved before the consumer moved in.
         '''
         _LOGGER.debug(f"Getting userinfo from API (ebrugerinfo)")
         userinfoURL = self._api_server + "api/getebrugerinfo?id=" + self._access_token
@@ -62,7 +66,8 @@ class Eforsyning:
         else:
             _LOGGER.error(f"Response from userinfo API. ebrugerinfo: {result.status_code}, Body: {result.text}")
 
-        return result_json['id']
+        self._user_id = result_json['id']
+        self._first_year = datetime.strptime(result_json['indflyttet'], '%d-%m-%Y').year
 
     def _get_intallations(self):
         '''
@@ -77,8 +82,6 @@ class Eforsyning:
         # https://api2.dff-edb.dk/kongerslev/api/FindInstallationer?id=fec53bccc22d0d92a9ab7e439188bd3f
         _LOGGER.debug(f"Getting installations at supplier: {self._supplierid}")
  
-        ebrugerid = self._get_ebrugerid()
-
         ## Get the URL to the REST API service
         installationsURL=self._api_server + "api/FindInstallationer?id=" + self._access_token
         _LOGGER.debug(f"Trying: {installationsURL}")
@@ -86,7 +89,7 @@ class Eforsyning:
                 "Soegetekst": "",
                 "Skip": "0",
                 "Take": "10000",
-                "EBrugerId": ebrugerid,
+                "EBrugerId": self._user_id,
                 "Huskeliste": "null",
                 "MedtagTilknyttede": "true"
                 }
@@ -148,14 +151,14 @@ class Eforsyning:
         '''
         _LOGGER.debug(f"Getting time series")
 
-        if from_date is None:
-            from_date = datetime.now()-timedelta(days=1)
-        if to_date is None:
-            to_date = datetime.now()
-
         date_format = '%d-%m-%Y'
-        parsed_from_date = from_date.strftime(date_format)
-        parsed_to_date = to_date.strftime(date_format)
+        parsed_from_date = "0"
+        parsed_to_date = "0"
+        if from_date is not None:
+            parsed_from_date = from_date.strftime(date_format)
+        if to_date is not None:
+            parsed_to_date = to_date.strftime(date_format)
+
 
         headers = self._create_headers()
 
@@ -171,7 +174,7 @@ class Eforsyning:
         #
         # For the field "AflaesningsUdjaevning" set to
         # - true - if missing reading for a day, registered on the day after should be averaged on the days between the last good readings.
-        #          A missing reading will effectively double the readig on the next day (if the consumption is constant)
+        #          A missing reading will effectively double the reading on the next day (if the consumption is constant)
         # - false - if missing readings should appear as zeroes - this could create a bumpt graph for daily readings.
         data_filter = "afMaanedsvis"
         data_average = "false"
@@ -192,18 +195,30 @@ class Eforsyning:
                 "ForbrugsAfgraensning_TilDato":parsed_to_date,
                 "ForbrugsAfgraensning_FraAflaesning":"0", ## 0|2|10
                 "ForbrugsAfgraensning_TilAflaesning":"2", ## 0|2|10
-                "ForbrugsAfgraensning_MedtagMellemliggendeMellemaflas":include_data_in_between, ## true || false
+                "ForbrugsAfgraensning_MedtagMellemliggendeMellemaflas":include_data_in_between, ## true || false (false when getting year data)
 
                 "Optioner":"foBestemtBeboer, foSkabDetaljer, foMedtagWebAflaes",
                 "AHoejDetail":"false", ## true || false
 
                 "Aflaesningsfilter":data_filter, ## afMaanedsvis || afDagsvis || afUfiltreret
                 "AflaesningsFilterDag":"ULTIMO", ## PRIMO || ULTIMO (pick data on first or last day of the week or month)
-                "AflaesningsUdjaevning":data_average, ## true || false (Create interpolated data it seems)
+                "AflaesningsUdjaevning":data_average, ## true || false (Create interpolated data it seems) (true if getting monthyly)
 
                 "SletFiltreredeAflaesninger":"true", ## true || false (Get rid of filtered data?)
-                "MedForventetForbrug":data_exp_read, ## true || false (Include or exclude expected reading values)
+                "MedForventetForbrug":data_exp_read, ## true || false (Include or exclude expected reading values) (true if getting monthly)
                 "OmregnForbrugTilAktuelleEnhed":"true" # true || false
+
+                # These ones seem to not cause any trouble if left out:
+                #"aCallKey":0,
+                #"ForbrugsAfgraensning_FraMellNr":"0",
+                #"ForbrugsAfgraensning_TilJournalNr":"0",
+                #"BestemtEnhed":"0",
+                #"Godkendelser":"0",
+                #"RadEksponent2":"0",
+                #"RadEksponent1":"0",
+                #"Belastningsfaktor":"0",
+                #"ForbrugsAfgraensning_FraAfl_nr":"0"
+                #"ForbrugsAfgraensning_TilMellnr":"0",
             }
 
         _LOGGER.debug(f"POST data to API. {data}")
@@ -344,6 +359,7 @@ class Eforsyning:
         Get latest data.
         '''
         _LOGGER.debug(f"Getting latest data")
+        self._get_ebrugerinfo()
         self._get_intallations()
 
         # Calculate the year parameter.  If the billing period is not skewed we
@@ -354,25 +370,42 @@ class Eforsyning:
         if self._billing_period_skew and month >= 1 and month <= 6:
             year = year - 1
 
-        raw_data = self._get_time_series(year=year,
+        # This is for heating data only - fetch yearly stats
+        if self._is_water_supply == False:
+            # Retrieve year data for the past max. 5 years.
+            year_result = []
+            for year_count in range(min(1 + datetime.now().year - self._first_year,6)):
+                year_data = self._get_time_series(year=self._first_year + year_count)
+                result = self._parse_result_totals_line(year_data)
+                year_result.append(result)
+
+            # Format data so Homeassistant sensor can understand it.
+            year_data = {
+                'year': year_result,
+                'temp-return-year': year_result[-1]['Temp-Return']
+            }
+
+        # Fetch the daily use data
+        day_data = self._get_time_series(year=year,
                                          day=True, # NOTE: Pulling daily data is required to get non-averaged temperature measurements
                                          from_date=datetime.now()-timedelta(days=1),
                                          to_date=datetime.now())
 
         # if there is a connection error, no data is returned, so don't try to parse it.
-        if raw_data:
+        if day_data:
             if self._is_water_supply == False:
-                result = self._parse_result_heating(raw_data)
+                result = self._parse_result_heating(day_data)
                 # Handle data from the billing
                 billing_data = self._get_billing_details()
                 billing_result = self._parse_result_billing(billing_data)
             else:
-                result = self._parse_result_water(raw_data)
+                result = self._parse_result_water(day_data)
                 # Pretty sure the billing record will *not* look the same for water data
                 billing_result = {}
+                year_data = {}
 
             _LOGGER.debug("Done parsing latest data")
-            return result | billing_result
+            return result | billing_result | year_data
         else:
             return None
 
@@ -385,7 +418,7 @@ class Eforsyning:
         if fstr == "":
             return 0.0
 
-        # Remove thousand . and convert deciml , to . - then convert to float value
+        # Remove thousand . and convert decimal , to . - then convert to float value
         val = float(fstr.replace('.','').replace(',', '.'))
         
         # Cull values above filter_above.  Some times data deliverd are missing decimal comma!
@@ -396,6 +429,78 @@ class Eforsyning:
         val = round(val*scale, 3)
 
         return val
+
+    def _parse_result_totals_line(self, result):
+        '''
+        When requesting yearly data a new field appears "IaltLinje".  This section total up important stats for the year.
+        This function does the parsing and returns a dictionary of the chosen values.
+
+        The intereting parts are depicted below:
+
+        "IaltLinje": {
+            "FraDatoStr": "dd-mm-yyyy",
+            "TilDatoStr": "dd-mm-yyyy",
+
+            "Tempfrem": "<float>",       <-- notice the case here - inconsistent!
+            "TempRetur": "<float>",      <-- this is the return temperature.  Keep below Forv_Retur.
+            "Forv_Retur": "<int 37?>",   <-- return temperature is probably benchmarked against this value (pay more if you go above)
+            "Afkoling": "<float>",
+
+            "NeutraltOmraadeOvre": "<int 37?>",  <-- Same value as Forv_Retur, dos it have a purpose?
+            "NeutraltOmraadeNedre": "<int 37?>"  <-- Same value as Forv_Retur, dos it have a purpose?
+
+            <<--  These values may  be interesting as it summarises expected consumption with actual for that year.-->>
+            "ForventetForbrugM3": "<float>",
+            "ForventetForbrugENG1": "<float>",
+            "TForbrugsTaellevaerk": [
+            {
+                "IndexNavn": "ENG1", <- Identifier
+                "Enhed_Txt": "MWh",
+                "Forbrug": "<float>"
+            },{
+                "IndexNavn": "M3",  <- Identifier
+                "Enhed_Txt": "M3",
+                "Forbrug": "<float>"
+            }],
+        }
+        '''
+        _LOGGER.debug(f"Parsing results - IaltLinje for non-day data.")
+        data = {
+            'from-date': result['IaltLinje']['FraDatoStr'],
+            'to-date': result['IaltLinje']['TilDatoStr'],
+            'temp-forward': self._stof(result['IaltLinje']['Tempfrem']),
+            'temp-return': self._stof(result['IaltLinje']['TempRetur']),
+            'temp-exp-return': self._stof(result['IaltLinje']['Forv_Retur']),
+            'temp-cooling': self._stof(result['IaltLinje']['Afkoling']),
+            'water-exp-used': result['IaltLinje']['ForventetForbrugM3'],
+            'energy-exp-used': result['IaltLinje']['ForventetForbrugENG1']
+        }
+        for meter in result['IaltLinje']['TForbrugsTaellevaerk']:
+            if meter['IndexNavn'] == "ENG1":
+                data['energy-used'] = meter['Forbrug']
+            elif meter['IndexNavn'] == "M3":
+                data['water-used'] = meter['Forbrug']
+
+        # Data collected - put into a format like the heating data.
+        # Leaving a mapping part here because I would like to rename all these fields to be 
+        # without case someday... some day...
+        metering_data = {
+            "DateFrom" : data['from-date'],
+            "DateTo" : data['to-date'],
+
+            "kWh-Used" : data['energy-used'],
+            "kWh-ExpUsed" : data['energy-exp-used'],
+
+            "M3-Used" : data['water-used'],
+            "M3-ExpUsed" : data['water-exp-used'],
+
+            "Temp-Forward" : data['temp-forward'],
+            "Temp-Return" : data['temp-return'],
+            "Temp-ExpReturn" : data['temp-exp-return'],
+            "Temp-Cooling" : data['temp-cooling']
+        }
+
+        return metering_data
 
     def _parse_result_heating(self, result):
         '''
@@ -410,6 +515,7 @@ class Eforsyning:
         _LOGGER.debug(f"Parsing results - heating metering")
 
         metering_data = {}
+
         # Extract data from the latest data point
         metering_data['year_start'] = result['AarStart']
         metering_data['year_end']   = result['AarSlut']
