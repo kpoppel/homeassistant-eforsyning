@@ -31,6 +31,7 @@ Fully configurable through config flow.
 This part is a little tricky, but hang on:
   1. Username and password is the credentials written on the bill, and the ones you use to
      login with on the website normally.
+     **Note that _only_ the credentials from the bill is supported as login method. Alternative login mehots use path which is not implemented.**
   2. The supplier ID is a little more involved
   3. Visit the main page for [eforsyning](https://eforsyning.dk).
   4. If you are redirected to the login site of your regional supplier, click the small
