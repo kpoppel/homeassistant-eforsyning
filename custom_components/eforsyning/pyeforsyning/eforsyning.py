@@ -477,11 +477,16 @@ class Eforsyning:
             'water-exp-used': result['IaltLinje']['ForventetForbrugM3'],
             'energy-exp-used': result['IaltLinje']['ForventetForbrugENG1']
         }
-        for meter in result['IaltLinje']['TForbrugsTaellevaerk']:
-            if meter['IndexNavn'] == "ENG1":
-                data['energy-used'] = meter['Forbrug']
-            elif meter['IndexNavn'] == "M3":
-                data['water-used'] = meter['Forbrug']
+        # It appears some data returned does not have this field.  Handle gracefully.
+        if 'TForbrugsTaellevaerk' in result['IaltLinje']:
+            for meter in result['IaltLinje']['TForbrugsTaellevaerk']:
+                if meter['IndexNavn'] == "ENG1":
+                    data['energy-used'] = meter['Forbrug']
+                elif meter['IndexNavn'] == "M3":
+                    data['water-used'] = meter['Forbrug']
+        else:
+            data['energy-used'] = 0.0
+            data['water-used'] = 0.0
 
         # Data collected - put into a format like the heating data.
         # Leaving a mapping part here because I would like to rename all these fields to be 
