@@ -374,8 +374,10 @@ class Eforsyning:
         if self._is_water_supply == False:
             # Retrieve year data for the past max. 5 years.
             year_result = []
-            for year_count in range(min(1 + datetime.now().year - self._first_year,6)):
-                year_data = self._get_time_series(year=self._first_year + year_count)
+            years_to_fetch = min(datetime.now().year - self._first_year, 5)
+            start_year = datetime.now().year - years_to_fetch
+            for year_count in range(years_to_fetch + 1):
+                year_data = self._get_time_series(year=start_year + year_count)
                 result = self._parse_result_totals_line(year_data)
                 year_result.append(result)
 
