@@ -277,3 +277,68 @@ series:
         return [new Date(start["date"]).getTime(), entity.attributes.data[index]["value"]];
       });
 ```
+
+### Summary on monthly basis of water and energy use with Apexchart
+Here is another graph you can use to show summary data from the attributes of the water and energy sensors. Thank-you goes out to @fuglphoenix for this tip!
+
+```
+type: custom:apexcharts-card
+graph_span: 365d
+update_interval: 1d
+span:
+  end: year
+header:
+  show: true
+  title: Fjernvarmevandforbrug
+  show_states: true
+  colorize_states: true
+apex_config:
+  xaxis:
+    tickAmount: 12
+    tickPlacement: between
+    type: datetime
+    labels:
+      datetimeFormatter:
+        year: yy
+        month: MMM
+        day: dd MMM
+        hour: HH
+    axisTicks:
+      height: 6
+all_series_config:
+  show:
+    legend_value: false
+    datalabels: false
+    extremas: true
+    in_brush: false
+  float_precision: 1
+  invert: false
+yaxis:
+  - decimals: 1
+series:
+  - entity: sensor.eforsyning_energy_exp_used   <-- exchange "energy" with "water" and you got the water data instead!
+    type: column
+    color: red
+    name: Forventet forbrug
+    data_generator: |
+      return entity.attributes.data.map((start, index) => {
+        return [new Date(start["date"]).getTime(), entity.attributes.data[index]["value"]];
+      });
+    group_by:
+      duration: 1month
+      func: sum
+  - entity: sensor.eforsyning_energy_used   <-- exchange "energy" with "water" and you got the water data instead!
+    type: column
+    name: Forbrug
+    data_generator: |
+      return entity.attributes.data.map((start, index) => {
+        return [new Date(start["date"]).getTime(), entity.attributes.data[index]["value"]];
+      });
+    group_by:
+      duration: 1month
+      func: sum
+```
+
+The resulting graph will look something like this one:
+
+![image](https://user-images.githubusercontent.com/4174578/203064137-225e3f8f-03cd-49e4-97e9-27e0e2ae4b00.png)
