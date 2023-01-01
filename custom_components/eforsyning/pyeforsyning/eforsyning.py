@@ -41,6 +41,9 @@ class Eforsyning:
         self._first_year = None
         self._installation_id = "1"
         self._access_token = ""
+        self._latest_year = 2000
+        self._latest_year_begin = ""
+        self._latest_year_end = ""
 
     def _get_ebrugerinfo(self):
         '''
@@ -126,6 +129,42 @@ class Eforsyning:
         _LOGGER.debug(f"Done getting installatons[0] {installations}")
 
         return installations
+
+    def _get_latest_year(self):
+        ''' Retrieve the latest available year.  This is the latest year data can be retrieved from.
+            When passing over a payment period, which could be New Year or even July or October depending
+            on the supplier financial year, data are reset and we start over.
+            In the case of fetching data this could mean the no data can be retrieved while this marker is
+            not updated.
+        '''
+        _LOGGER.debug(f"Getting installations at supplier: {self._supplierid}")
+ 
+        ## Get the URL to the REST API service
+        getaktuelaarsmaerkeURL=self._api_server + "api/getaktuelaarsmaerke?id=" + self._access_token
+        _LOGGER.debug(f"Trying: {getaktuelaarsmaerkeURL}")
+        headers = self._create_headers()
+
+        result = requests.post(getaktuelaarsmaerkeURL,
+                                timeout = 5,
+                                headers=headers
+                              )
+
+        _LOGGER.debug(f"Response from API. Status: {result.status_code}, Body: {result.text}")
+
+        result_json = result.json()
+        # Data looks like this:
+        #{"aarsmaerke":2022,
+        # "aarsmaerke_start":"01-01-2022",
+        # "aarsmaerke_slut":"31-12-2022"
+        #}
+        result_json = result.json()
+        self._latest_year = int(result_json['aarsmaerke'])
+        self._latest_year_begin = str(result_json['aarsmaerke_start'])
+        self._latest_year_end = str(result_json['aarsmaerke_slut'])
+
+        _LOGGER.debug(f"Done getting latest year data {self._latest_year}")
+
+        return result_json
 
     def _get_time_series(self,
                         from_date=None,
@@ -351,7 +390,8 @@ class Eforsyning:
                 #'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 'X-Session-ID': self._x_session_id,
-                'X-Correlation-ID': ''.join(random.choice("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") for i in range(8))
+                'X-Correlation-ID': ''.join(random.choice("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ") for i in range(8)),
+                'User-Agent': 'HomeAssistant - eforsyning integration, Python requests module'
                 }
 
     def get_latest(self):
@@ -361,21 +401,14 @@ class Eforsyning:
         _LOGGER.debug(f"Getting latest data")
         self._get_ebrugerinfo()
         self._get_intallations()
-
-        # Calculate the year parameter.  If the billing period is not skewed we
-        # use the current year.  If it is skewed we must use the year before until
-        # the billing period changes from July 1st.
-        year = datetime.now().year
-        month = datetime.now().month
-        if self._billing_period_skew and month >= 1 and month <= 6:
-            year = year - 1
+        self._get_latest_year()
 
         # This is for heating data only - fetch yearly stats
         if self._is_water_supply == False:
             # Retrieve year data for the past max. 5 years.
             year_result = []
-            years_to_fetch = min(datetime.now().year - self._first_year, 5)
-            start_year = datetime.now().year - years_to_fetch
+            years_to_fetch = min(self._latest_year - self._first_year, 5)
+            start_year = self._latest_year - years_to_fetch
             for year_count in range(years_to_fetch + 1):
                 year_data = self._get_time_series(year=start_year + year_count)
                 result = self._parse_result_totals_line(year_data)
@@ -388,7 +421,7 @@ class Eforsyning:
             }
 
         # Fetch the daily use data
-        day_data = self._get_time_series(year=year,
+        day_data = self._get_time_series(year=self._latest_year,
                                          day=True, # NOTE: Pulling daily data is required to get non-averaged temperature measurements
                                          from_date=datetime.now()-timedelta(days=1),
                                          to_date=datetime.now())
