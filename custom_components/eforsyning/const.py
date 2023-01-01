@@ -2,11 +2,12 @@
 from __future__ import annotations
 from typing import Final
 from datetime import timedelta
-from homeassistant.const import (TEMP_CELSIUS,
-                                 DEVICE_CLASS_ENERGY, DEVICE_CLASS_TEMPERATURE,
-                                 DEVICE_CLASS_GAS, DEVICE_CLASS_MONETARY,
-                                 ENERGY_KILO_WATT_HOUR, VOLUME_CUBIC_METERS)
-from homeassistant.components.sensor import STATE_CLASS_MEASUREMENT
+# Get Sensor classification and unit definitions:
+from homeassistant.components.sensor import SensorStateClass
+from homeassistant.components.sensor import SensorDeviceClass
+from homeassistant.const import UnitOfTemperature
+from homeassistant.const import UnitOfEnergy
+from homeassistant.const import UnitOfVolume
 
 from .model import EforsyningSensorDescription
 
@@ -14,6 +15,10 @@ DOMAIN = "eforsyning"
 
 # Default name for sensor prefix texts (possibly other things)
 DEFAULT_NAME = "eForsyning"
+
+###################################
+## DEV NOTE: suggested_unit_of_measurement does not seem to have any effect on existing sensors
+###################################
 
 ######################################################################
 ##  NOTICE ON FAIR USE:
@@ -46,40 +51,40 @@ HEATING_TEMP_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
         key = "temp-forward",
         name = "Water Temperature forward",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = TEMP_CELSIUS,
-        device_class = DEVICE_CLASS_TEMPERATURE,
+        native_unit_of_measurement = UnitOfTemperature.CELSIUS,
+        device_class = SensorDeviceClass.TEMPERATURE,
         icon = "mdi:thermometer",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.MEASUREMENT,
         attribute_data = "Temp-Forward"
     ),
     EforsyningSensorDescription(
         key = "temp-return",
         name = "Water Temperature return",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = TEMP_CELSIUS,
-        device_class = DEVICE_CLASS_TEMPERATURE,
+        native_unit_of_measurement = UnitOfTemperature.CELSIUS,
+        device_class = SensorDeviceClass.TEMPERATURE,
         icon = "mdi:thermometer",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.MEASUREMENT,
         attribute_data = "Temp-Return"
     ),
     EforsyningSensorDescription(
         key = "temp-exp-return",
         name = "Water Temperature exp-return",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = TEMP_CELSIUS,
-        device_class = DEVICE_CLASS_TEMPERATURE,
+        native_unit_of_measurement = UnitOfTemperature.CELSIUS,
+        device_class = SensorDeviceClass.TEMPERATURE,
         icon = "mdi:thermometer",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.MEASUREMENT,
         attribute_data = "Temp-ExpReturn"
     ),
     EforsyningSensorDescription(
         key = "temp-cooling",
         name = "Water Temperature cooling",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = TEMP_CELSIUS,
-        device_class = DEVICE_CLASS_TEMPERATURE,
+        native_unit_of_measurement = UnitOfTemperature.CELSIUS,
+        device_class = SensorDeviceClass.TEMPERATURE,
         icon = "mdi:thermometer",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.MEASUREMENT,
         attribute_data = "Temp-Cooling"
     ),
 
@@ -91,10 +96,10 @@ HEATING_TEMP_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
         key = "temp-return-year",
         name = "Water Temperature return year-to-date",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = TEMP_CELSIUS,
-        device_class = DEVICE_CLASS_TEMPERATURE,
+        native_unit_of_measurement = UnitOfTemperature.CELSIUS,
+        device_class = SensorDeviceClass.TEMPERATURE,
         icon = "mdi:thermometer",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.MEASUREMENT,
         attribute_data = None
     ),
 )
@@ -103,71 +108,76 @@ HEATING_ENERGY_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
     EforsyningSensorDescription(
         key = "energy-start",
         name = "Energy start",
-        entity_registry_enabled_default = True,
-        native_unit_of_measurement = ENERGY_KILO_WATT_HOUR,
-        device_class = DEVICE_CLASS_ENERGY,
+        entity_registry_enabled_default = False,
+        native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_unit_of_measurement = UnitOfEnergy.MEGA_WATT_HOUR,
+        device_class = SensorDeviceClass.ENERGY,
         icon = "mdi:lightning-bolt-circle",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.TOTAL_INCREASING,
         attribute_data = "kWh-Start"
     ),
     EforsyningSensorDescription(
         key = "energy-end",
         name = "Energy end",
-        entity_registry_enabled_default = True,
-        native_unit_of_measurement = ENERGY_KILO_WATT_HOUR,
-        device_class = DEVICE_CLASS_ENERGY,
+        entity_registry_enabled_default = False,
+        native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_unit_of_measurement = UnitOfEnergy.MEGA_WATT_HOUR,
+        device_class = SensorDeviceClass.ENERGY,
         icon = "mdi:lightning-bolt-circle",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.TOTAL_INCREASING,
         attribute_data = "kWh-End"
     ),
     EforsyningSensorDescription(
         key = "energy-used",
         name = "Energy used",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = ENERGY_KILO_WATT_HOUR,
-        device_class = DEVICE_CLASS_ENERGY,
+        native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR,
+        device_class = SensorDeviceClass.ENERGY,
         icon = "mdi:lightning-bolt-circle",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.MEASUREMENT,
         attribute_data = "kWh-Used"
     ),
     EforsyningSensorDescription(
         key = "energy-exp-used",
         name = "Energy exp-used",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = ENERGY_KILO_WATT_HOUR,
-        device_class = DEVICE_CLASS_ENERGY,
+        native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR,
+        device_class = SensorDeviceClass.ENERGY,
         icon = "mdi:lightning-bolt-circle",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.MEASUREMENT,
         attribute_data = "kWh-ExpUsed"
     ),
     EforsyningSensorDescription(
         key = "energy-exp-end",
         name = "Energy exp-end",
-        entity_registry_enabled_default = True,
-        native_unit_of_measurement = ENERGY_KILO_WATT_HOUR,
-        device_class = DEVICE_CLASS_ENERGY,
+        entity_registry_enabled_default = False,
+        native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_unit_of_measurement = UnitOfEnergy.MEGA_WATT_HOUR,
+        device_class = SensorDeviceClass.ENERGY,
         icon = "mdi:lightning-bolt-circle",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.TOTAL_INCREASING,
         attribute_data = "kWh-ExpEnd"
     ),
     EforsyningSensorDescription(
         key = "energy-total-used",
         name = "Energy total-used",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = ENERGY_KILO_WATT_HOUR,
-        device_class = DEVICE_CLASS_ENERGY,
+        native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_unit_of_measurement = UnitOfEnergy.MEGA_WATT_HOUR,
+        device_class = SensorDeviceClass.ENERGY,
         icon = "mdi:lightning-bolt-circle",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.TOTAL_INCREASING,
         attribute_data = None
     ),
     EforsyningSensorDescription(
         key = "energy-use-prognosis",
         name = "Energy use-prognosis",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = ENERGY_KILO_WATT_HOUR,
-        device_class = DEVICE_CLASS_ENERGY,
+        native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR,
+        suggested_unit_of_measurement = UnitOfEnergy.MEGA_WATT_HOUR,
+        device_class = SensorDeviceClass.ENERGY,
         icon = "mdi:lightning-bolt-circle",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.TOTAL,
         attribute_data = None
     ),
 )
@@ -176,71 +186,71 @@ HEATING_WATER_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
     EforsyningSensorDescription(
         key = "water-start",
         name = "Water start",
-        entity_registry_enabled_default = True,
-        native_unit_of_measurement = VOLUME_CUBIC_METERS,
-        device_class = DEVICE_CLASS_GAS,
+        entity_registry_enabled_default = False,
+        native_unit_of_measurement = UnitOfVolume.CUBIC_METERS,
+        device_class = SensorDeviceClass.WATER,
         icon = "mdi:water",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.TOTAL_INCREASING,
         attribute_data = "M3-Start"
     ),
     EforsyningSensorDescription(
         key = "water-end",
         name = "Water end",
-        entity_registry_enabled_default = True,
-        native_unit_of_measurement = VOLUME_CUBIC_METERS,
-        device_class = DEVICE_CLASS_GAS,
+        entity_registry_enabled_default = False,
+        native_unit_of_measurement = UnitOfVolume.CUBIC_METERS,
+        device_class = SensorDeviceClass.WATER,
         icon = "mdi:water",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.TOTAL_INCREASING,
         attribute_data = "M3-End"
     ),
     EforsyningSensorDescription(
         key = "water-used",
         name = "Water used",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = VOLUME_CUBIC_METERS,
-        device_class = DEVICE_CLASS_GAS,
+        native_unit_of_measurement = UnitOfVolume.CUBIC_METERS,
+        device_class = SensorDeviceClass.WATER,
         icon = "mdi:water",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.MEASUREMENT,
         attribute_data = "M3-Used"
     ),
     EforsyningSensorDescription(
         key = "water-exp-used",
         name = "Water exp-used",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = VOLUME_CUBIC_METERS,
-        device_class = DEVICE_CLASS_GAS,
+        native_unit_of_measurement = UnitOfVolume.CUBIC_METERS,
+        device_class = SensorDeviceClass.WATER,
         icon = "mdi:water",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.MEASUREMENT,
         attribute_data = "M3-ExpUsed"
     ),
     EforsyningSensorDescription(
         key = "water-exp-end",
         name = "Water exp-end",
-        entity_registry_enabled_default = True,
-        native_unit_of_measurement = VOLUME_CUBIC_METERS,
-        device_class = DEVICE_CLASS_GAS,
+        entity_registry_enabled_default = False,
+        native_unit_of_measurement = UnitOfVolume.CUBIC_METERS,
+        device_class = SensorDeviceClass.WATER,
         icon = "mdi:water",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.TOTAL_INCREASING,
         attribute_data = "M3-ExpEnd"
     ),
     EforsyningSensorDescription(
         key = "water-total-used",
         name = "Water total-used",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = VOLUME_CUBIC_METERS,
-        device_class = DEVICE_CLASS_GAS,
+        native_unit_of_measurement = UnitOfVolume.CUBIC_METERS,
+        device_class = SensorDeviceClass.WATER,
         icon = "mdi:water",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.TOTAL_INCREASING,
         attribute_data = None
     ),
     EforsyningSensorDescription(
         key = "water-use-prognosis",
         name = "Water use-prognosis",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = VOLUME_CUBIC_METERS,
-        device_class = DEVICE_CLASS_GAS,
+        native_unit_of_measurement = UnitOfVolume.CUBIC_METERS,
+        device_class = SensorDeviceClass.WATER,
         icon = "mdi:water",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.TOTAL,
         attribute_data = None
     ),
 )
@@ -249,82 +259,90 @@ WATER_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
     EforsyningSensorDescription(
         key = "water-start",
         name = "Water start",
-        entity_registry_enabled_default = True,
-        native_unit_of_measurement = VOLUME_CUBIC_METERS,
-        device_class = DEVICE_CLASS_GAS,
+        entity_registry_enabled_default = False,
+        native_unit_of_measurement = UnitOfVolume.CUBIC_METERS,
+        device_class = SensorDeviceClass.WATER,
         icon = "mdi:water",
-        state_class = STATE_CLASS_MEASUREMENT,
-        attribute_data = "Start"
+        state_class = SensorStateClass.TOTAL_INCREASING,
+        attribute_data = "Start",
+        last_reset = None
     ),
     EforsyningSensorDescription(
         key = "water-end",
         name = "Water end",
-        entity_registry_enabled_default = True,
-        native_unit_of_measurement = VOLUME_CUBIC_METERS,
-        device_class = DEVICE_CLASS_GAS,
+        entity_registry_enabled_default = False,
+        native_unit_of_measurement = UnitOfVolume.CUBIC_METERS,
+        device_class = SensorDeviceClass.WATER,
         icon = "mdi:water",
-        state_class = STATE_CLASS_MEASUREMENT,
-        attribute_data = "End"
+        state_class = SensorStateClass.TOTAL_INCREASING,
+        attribute_data = "End",
+        last_reset = None
     ),
     EforsyningSensorDescription(
         key = "water-used",
         name = "Water used",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = VOLUME_CUBIC_METERS,
-        device_class = DEVICE_CLASS_GAS,
+        native_unit_of_measurement = UnitOfVolume.CUBIC_METERS,
+        device_class = SensorDeviceClass.WATER,
         icon = "mdi:water",
-        state_class = STATE_CLASS_MEASUREMENT,
-        attribute_data = "Used"
+        state_class = SensorStateClass.MEASUREMENT,
+        attribute_data = "Used",
+        last_reset = None
     ),
     EforsyningSensorDescription(
         key = "water-exp-used",
-        name = "Water exp-end",
+        name = "Water exp-used",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = VOLUME_CUBIC_METERS,
-        device_class = DEVICE_CLASS_GAS,
+        native_unit_of_measurement = UnitOfVolume.CUBIC_METERS,
+        device_class = SensorDeviceClass.WATER,
         icon = "mdi:water",
-        state_class = STATE_CLASS_MEASUREMENT,
-        attribute_data = "ExpUsed"
+        state_class = SensorStateClass.MEASUREMENT,
+        attribute_data = "ExpUsed",
+        last_reset = None
     ),
     EforsyningSensorDescription(
         key = "water-exp-end",
         name = "Water exp-end",
-        entity_registry_enabled_default = True,
-        native_unit_of_measurement = VOLUME_CUBIC_METERS,
-        device_class = DEVICE_CLASS_GAS,
+        entity_registry_enabled_default = False,
+        native_unit_of_measurement = UnitOfVolume.CUBIC_METERS,
+        device_class = SensorDeviceClass.WATER,
         icon = "mdi:water",
-        state_class = STATE_CLASS_MEASUREMENT,
-        attribute_data = "ExpEnd"
+        state_class = SensorStateClass.TOTAL_INCREASING,
+        attribute_data = "ExpEnd",
+        last_reset = None
     ),
     EforsyningSensorDescription(
         key = "water-ytd-used",
         name = "Water ytd-used",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = VOLUME_CUBIC_METERS,
-        device_class = DEVICE_CLASS_GAS,
+        native_unit_of_measurement = UnitOfVolume.CUBIC_METERS,
+        device_class = SensorDeviceClass.WATER,
         icon = "mdi:water",
-        state_class = STATE_CLASS_MEASUREMENT,
-        attribute_data = None
+        state_class = SensorStateClass.TOTAL_INCREASING,
+        attribute_data = None,
+        last_reset = None
     ),
     EforsyningSensorDescription(
         key = "water-exp-ytd-used",
         name = "Water exp-ytd-used",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = VOLUME_CUBIC_METERS,
-        device_class = DEVICE_CLASS_GAS,
+        native_unit_of_measurement = UnitOfVolume.CUBIC_METERS,
+        device_class = SensorDeviceClass.WATER,
         icon = "mdi:water",
-        state_class = STATE_CLASS_MEASUREMENT,
-        attribute_data = None
+        state_class = SensorStateClass.TOTAL_INCREASING,
+        attribute_data = None,
+        last_reset = None
     ),
     EforsyningSensorDescription(
         key = "water-exp-fy-used",
         name = "Water exp-fy-used",
         entity_registry_enabled_default = True,
-        native_unit_of_measurement = VOLUME_CUBIC_METERS,
-        device_class = DEVICE_CLASS_GAS,
+        native_unit_of_measurement = UnitOfVolume.CUBIC_METERS,
+        device_class = SensorDeviceClass.WATER,
         icon = "mdi:water",
-        state_class = STATE_CLASS_MEASUREMENT,
-        attribute_data = None
+        state_class = SensorStateClass.TOTAL,
+        attribute_data = None,
+        last_reset = None
     ),
 )
 
@@ -334,9 +352,9 @@ BILLING_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
         name = "Amount remaining",
         entity_registry_enabled_default = True,
         native_unit_of_measurement = "kr",
-        device_class = DEVICE_CLASS_MONETARY,
+        device_class = SensorDeviceClass.MONETARY,
         icon = "mdi:cash-100",
-        state_class = STATE_CLASS_MEASUREMENT,
+        state_class = SensorStateClass.MEASUREMENT,
         attribute_data = None # This one has a separate data entry with attributes.
     ),
 )
