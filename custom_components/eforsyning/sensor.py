@@ -6,7 +6,7 @@ from typing import Any, cast
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.const import CONF_NAME
+#from homeassistant.const import CONF_NAME
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import (
@@ -19,13 +19,6 @@ _LOGGER = logging.getLogger(__name__)
 
 from .const import DOMAIN, WATER_SENSOR_TYPES, HEATING_TEMP_SENSOR_TYPES, HEATING_ENERGY_SENSOR_TYPES, HEATING_WATER_SENSOR_TYPES, BILLING_SENSOR_TYPES
 from .model import EforsyningSensorDescription
-
-from homeassistant.const import (TEMP_CELSIUS,
-                                 DEVICE_CLASS_ENERGY, DEVICE_CLASS_TEMPERATURE,
-                                 DEVICE_CLASS_GAS, DEVICE_CLASS_MONETARY,
-                                 ENERGY_KILO_WATT_HOUR, VOLUME_CUBIC_METERS)
-from homeassistant.components.sensor import (SensorEntity, STATE_CLASS_MEASUREMENT, STATE_CLASS_TOTAL,
-                                            STATE_CLASS_TOTAL_INCREASING)
 
 import uuid
 
