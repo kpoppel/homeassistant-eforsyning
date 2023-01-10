@@ -420,11 +420,47 @@ class Eforsyning:
                 'temp-return-year': year_result[-1]['Temp-Return']
             }
 
-        # Fetch the daily use data
-        day_data = self._get_time_series(year=self._latest_year,
-                                         day=True, # NOTE: Pulling daily data is required to get non-averaged temperature measurements
-                                         from_date=datetime.now()-timedelta(days=1),
-                                         to_date=datetime.now())
+        # NOTE:
+        # If the current year is later than the latest year it _may_ mean that data fetched is no longer valid
+        # For people with January-December payment years this means trouble because monthly and yearly totals
+        # are not updated. It semms this first happens after the first month has passed? (yet to be seen)
+        # So if the current year is > than lastest_year try to fetch daily data using the current year.
+        # If this looks sensible, use that data for further processing, otherwise do as normal.
+        # The only parameter if significance is the year.  dates are just ignored, so a date range of 1 day is ignored in "day" mode.
+        #
+        # Two failure situations things can happen I think:
+        #    {"response":"TForb: Opslag på årsmærke fejlede(TForbrug.Beregn): 2024"}
+        # or a situation where there are no lines returned
+        #  {
+        #  "ForbrugsLinjer": {
+        #   "AktuelLinjeNr": "0",
+        #   "AntLinjer": "0",
+        #   "Text": "",
+        #   "Pris": "0"
+        #  },
+        # If none of these, all should be okay actually.
+        #
+        # The latest year marker is set by the heating company but could be a manual process on their side.
+        day_data = None
+
+        # Try "invalid" year first if January and the year marker is not updated.
+        _LOGGER.debug(f"{datetime.now().month} - {datetime.now().year} - {self._latest_year}")
+        if datetime.now().month == 1 and datetime.now().year > self._latest_year:
+            day_data = self._get_time_series(year=datetime.now().year,
+                                            day=True, # NOTE: Pulling daily data is required to get non-averaged temperature measurements
+                                            from_date=datetime.now()-timedelta(days=1),
+                                            to_date=datetime.now())
+            if 'response' in day_data or day_data['ForbrugsLinjer']['AntLinjer'] == "0":
+                _LOGGER.debug("Fetching new year data did not result in valid data.  Getting current dataset from %s", self._latest_year)
+                day_data = None
+
+        
+        if day_data == None:
+            # Fetch the daily use data using the API based yearly marker
+            day_data = self._get_time_series(year=self._latest_year,
+                                            day=True, # NOTE: Pulling daily data is required to get non-averaged temperature measurements
+                                            from_date=datetime.now()-timedelta(days=1),
+                                            to_date=datetime.now())
 
         # if there is a connection error, no data is returned, so don't try to parse it.
         if day_data:
