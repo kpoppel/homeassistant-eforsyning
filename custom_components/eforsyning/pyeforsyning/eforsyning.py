@@ -624,6 +624,9 @@ class Eforsyning:
                 multiplier = 1
                 if unit == "MWh":
                     multiplier = 1000
+                elif unit == "Gj":
+                    # 1 kWh = 0.0036 GJ, so the conversion is <n GJ> * 1/0.0036 = m kWh
+                    multiplier = float(1/0.0036)
 
                 if reading['IndexNavn'] == "M3":
                     metering_data['water-start'] = self._stof(reading['Start'])
