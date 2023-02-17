@@ -72,7 +72,7 @@ class Eforsyning:
         self._user_id = result_json['id']
         self._first_year = datetime.strptime(result_json['indflyttet'], '%d-%m-%Y').year
 
-    def _get_intallations(self):
+    def _get_installations(self):
         '''
         Get the installations to set installation_id and asset_id
         Restriction:  We will find the first installation_id == 1 and
@@ -273,6 +273,7 @@ class Eforsyning:
             return result
 
         except requests.exceptions.RequestException:
+            _LOGGER.warning(f"RequestException {result}")
             raise HTTPFailed(result.raise_for_status())
 
         _LOGGER.debug(f"Done getting time series {result.status_code}, Body: {result.text}")
@@ -338,7 +339,7 @@ class Eforsyning:
             return False
 
         if result.status_code != 200:
-            raise LoginFailed("Not able to get access token. HTTP status: {result.status_code}.  Probably a wrong username.")
+            raise LoginFailed(f"Not able to get access token. HTTP status: {result.status_code}.  Probably a wrong username.")
 
         result_json = result.json()
         token = result_json['Token']
@@ -400,7 +401,7 @@ class Eforsyning:
         '''
         _LOGGER.debug(f"Getting latest data")
         self._get_ebrugerinfo()
-        self._get_intallations()
+        self._get_installations()
         self._get_latest_year()
 
         # This is for heating data only - fetch yearly stats
