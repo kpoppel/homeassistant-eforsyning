@@ -1,6 +1,6 @@
 {
     "name": "Eforsyning",
     "country": "DK",
-    "homeassistant": "2022.12"
-    "render_readme": true,
+    "homeassistant": "2022.12",
+    "render_readme": true
 }
