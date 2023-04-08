@@ -750,10 +750,12 @@ class Eforsyning:
           0  = [13 lines] Skip - as only text
           1  = [1 line] Fixed m3 contribution
           3  = [5 lines] Looks related to consumtion data (MWh, prognosis on MWh and such)
+          7  = [1 line] Fixed yearly subscription fee
           10 = [1 line] Amount VAT
           12 = [5 lines] Amounts related to totals and remaining payment incl./excl. VAT
           18 = [2 lines] Amount already billed and amount in arrears (restance) (don't worry if this has a value - the report is drawn as if all payment should have been made)
           20 = [1 line] Expected payment remainder of the billing year (= -<ammount arrears>)
+          22 = [6 lines] forward temperature, return temperature, expected return temperature and return temperature fee
 
         Depending on the line, the remaining fields have or does not have a value.
         In terms of sensors, the interesting data to pull out would be:
@@ -1017,6 +1019,10 @@ class Eforsyning:
                     # Price totalled incl. VAT
                     amount_total = self._stof(record['ialt'])
                     continue
+                elif record['tekst'] == "\u00c5rets forventede resultat":
+                    # Price totalled incl. VAT
+                    amount_total = self._stof(record['ialt'])
+                    continue
                 elif record['tekst'] in "Til udbetaling|Tilbagebetaling":
                     # Remaining expected remuneration (indicated by a negative number)
                     amount_remaining = -self._stof(record['ialt'])
@@ -1038,6 +1044,9 @@ class Eforsyning:
             elif record['linieType'] == "20":
                 # Expected future payments (positive), or paid-back (negative)
                 # Not used
+                continue
+            elif record['linieType'] == "22":
+                # If return temperature is too high, you have to pay a extra fee.
                 continue
 
         metering_data = {}
