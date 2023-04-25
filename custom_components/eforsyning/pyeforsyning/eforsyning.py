@@ -746,13 +746,14 @@ class Eforsyning:
         In the JSON these are the data points:
           faktlini[0..27].ekstra|enhedPris|linieType|antalEnheder|enhed|tekst|prisEnhed|opl4|opl3|opl2|opl1|ialt
         
-        linieType = 0, 1, 3, 10, 12, 18, 20
+        linieType = 0, 1, 3, 10, 12, 13, 18, 20
           0  = [13 lines] Skip - as only text
           1  = [1 line] Fixed m3 contribution
-          3  = [5 lines] Looks related to consumtion data (MWh, prognosis on MWh and such)
+          3  = [5 lines] Looks related to consumption data (MWh, prognosis on MWh, price for GJ and such)
           7  = [1 line] Fixed yearly subscription fee
           10 = [1 line] Amount VAT
           12 = [5 lines] Amounts related to totals and remaining payment incl./excl. VAT
+          13 = [1 line] Skip as it is empty
           18 = [2 lines] Amount already billed and amount in arrears (restance) (don't worry if this has a value - the report is drawn as if all payment should have been made)
           20 = [1 line] Expected payment remainder of the billing year (= -<ammount arrears>)
           22 = [6 lines] forward temperature, return temperature, expected return temperature and return temperature fee
@@ -813,6 +814,38 @@ class Eforsyning:
                 "opl2": "",
                 "opl1": "",
                 "ialt": "930,07" <--- this is the price of that prognosis
+                },
+
+            idx[n] (example with GJ unit instead of MWh)
+                {
+                "ekstra": "kr.",
+                "enhedPris": "124,00",
+                "linieType": "3",
+                "antalEnheder": "3,37",
+                "enhed": "Gj",
+                "tekst": "12345678",
+                "prisEnhed": "kr./Gj",
+                "opl4": "Gj",
+                "opl3": "213,40",
+                "opl2": "Gj",
+                "opl1": "210,03",
+                "ialt": "417,88"
+                },
+
+            idx[n] (example with GJ unit instead of MWh)
+                {
+                "ekstra": "kr.",
+                "enhedPris": "124,00",
+                "linieType": "3",
+                "antalEnheder": "46,78",
+                "enhed": "Gj",
+                "tekst": "Forventet forbrug: 15-01-2023 til 31-12-2023",
+                "prisEnhed": "kr./Gj",
+                "opl4": "",
+                "opl3": "",
+                "opl2": "",
+                "opl1": "",
+                "ialt": "5.800,72"
                 },
 
             idx[6]
@@ -968,6 +1001,7 @@ class Eforsyning:
         amount_remaining = 0.0
 
         multiplier = 1000 # scaling factor to kWh frm MWh
+        multiplier_gj = 227.78 # Scaling factor to kWh from from GJ
 
         for record in result:
             if record['linieType'] == "0":
@@ -983,13 +1017,17 @@ class Eforsyning:
                 if "Afkøling" in record['tekst']:
                     # Average cooling - not used
                     continue
-                elif "Prognose" in record['tekst']:
+                elif any(test_str in record['tekst'] for test_str in ["Prognose", "Forventet forbrug"]):
                     if record['enhed'] == "MWh":
                         # Prognosis heating in MWh scaled to kWh
                         energy_prognosis = self._stof(record['antalEnheder'], scale=multiplier)
                         continue
+                    elif record['enhed'] == "Gj":
+                        # Prognosis heating in GJ scaled to kWh
+                        energy_prognosis = self._stof(record['antalEnheder'], scale=multiplier_gj)
+                        continue
                     else:
-                        # Not a prognosis in MWh - not used (and not seen in data so far)
+                        # Not a prognosis in MWh or GJ - not used
                         continue
                 elif record['enhed'] == "MWh":
                     # Price of comsumption of energy.
@@ -998,6 +1036,14 @@ class Eforsyning:
                     energy_total_used_price += self._stof(record['ialt'])
                     energy_total_used += self._stof(record['antalEnheder'], scale=multiplier)
                     energy_price = round(multiplier*energy_total_used_price/energy_total_used, 2)
+                    continue
+                elif record['enhed'] == "Gj":
+                    # Price of comsumption of energy.
+                    # If there are more records like these, it would seen the price may have been adjusted.
+                    # Calculate the average GJ price in that case.
+                    energy_total_used_price += self._stof(record['ialt'])
+                    energy_total_used += self._stof(record['antalEnheder'], scale=multiplier_gj)
+                    energy_price = round(multiplier_gj*energy_total_used_price/energy_total_used, 2)
                     continue
                 elif record['enhed'] == "M3":
                     # Consumption in M3 (water passed through the system)
@@ -1015,7 +1061,7 @@ class Eforsyning:
                     # Price of MWh totalled
                     amount_energy = self._stof(record['ialt'])
                     continue
-                elif record['tekst'] == "Total (incl.moms)":
+                elif any(test_str in record['tekst'] for test_str in ["Total (incl.moms)", "Total, inkl. moms"]):
                     # Price totalled incl. VAT
                     amount_total = self._stof(record['ialt'])
                     continue
@@ -1023,17 +1069,19 @@ class Eforsyning:
                     # Price totalled incl. VAT
                     amount_total = self._stof(record['ialt'])
                     continue
-                elif record['tekst'] in "Til udbetaling|Tilbagebetaling":
+                elif any(test_str in record['tekst'] for test_str in ["Til udbetaling", "Tilbagebetaling"]):
                     # Remaining expected remuneration (indicated by a negative number)
                     amount_remaining = -self._stof(record['ialt'])
                     continue
-                elif "Til indbetaling" in record['tekst']:
+                elif any(test_str in record['tekst'] for test_str in ["Til indbetaling", "For lidt opkr\u00e6vet", "Forel\u00f8big beregnet efterbetaling"]):
                     # Remaining expected payment (indicated by a positive number)
                     amount_remaining = self._stof(record['ialt'])
                     continue
                 else:
-                    # Comething else, like amount excl. VAT, too much paid, too little paid - not used
+                    # Something else, like amount excl. VAT, too much paid, too little paid - not used
                     continue
+            elif record['linieType'] == "13":
+                continue
             elif record['linieType'] == "18":
                 if "Restance" in record['tekst']:
                     continue
