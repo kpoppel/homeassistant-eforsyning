@@ -101,7 +101,7 @@ class Eforsyning:
 
         result = requests.post(installationsURL,
                                 data = json.dumps(data),
-                                timeout = 5,
+                                timeout = 10,
                                 headers=headers
                               )
 
@@ -145,7 +145,7 @@ class Eforsyning:
         headers = self._create_headers()
 
         result = requests.post(getaktuelaarsmaerkeURL,
-                                timeout = 5,
+                                timeout = 10,
                                 headers=headers
                               )
 
@@ -265,7 +265,7 @@ class Eforsyning:
         try:
             result = requests.post(self._api_server + post_meter_data_url,
                                     data = json.dumps(data),
-                                    timeout = 5,
+                                    timeout = 10,
                                     headers=headers
                                 )
         except requests.exceptions.Timeout:
@@ -297,7 +297,7 @@ class Eforsyning:
         try:
             result = requests.post(self._api_server + post_billing_data_url,
                                     data = json.dumps(data),
-                                    timeout = 5,
+                                    timeout = 10,
                                     headers=headers
                                 )
         except requests.exceptions.RequestException:
