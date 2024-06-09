@@ -656,9 +656,9 @@ class Eforsyning:
                     metering_data['extra-used'] = self._stof(reading['Forbrug'])
 
             metering_data['data'].append({
-                "DateFrom" : datetime.strptime(fl["FraDatoStr"], "%d-%m-%Y").strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-                "DateTo" : datetime.strptime(fl["TilDatoStr"], "%d-%m-%Y").strftime("%Y-%m-%dT%H:%M:%S.000Z"),
-
+                "DateFrom" : datetime.strptime(fl["FraDatoStr"], "%d-%m-%Y").strftime("%Y-%m-%d"),
+                "DateTo" : datetime.strptime(fl["TilDatoStr"], "%d-%m-%Y").strftime("%Y-%m-%d"),
+ 
                 "kWh-Start" : metering_data['energy-start'],
                 "kWh-End" : metering_data['energy-end'],
                 "kWh-Used" : metering_data['energy-used'],
