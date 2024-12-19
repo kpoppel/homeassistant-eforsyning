@@ -144,7 +144,7 @@ HEATING_ENERGY_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
         native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR,
         device_class = SensorDeviceClass.ENERGY,
         icon = "mdi:lightning-bolt-circle",
-        state_class = None,
+        state_class = SensorStateClass.TOTAL,
         attribute_data = "kWh-ExpUsed"
     ),
     EforsyningSensorDescription(
@@ -210,7 +210,7 @@ HEATING_WATER_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
         native_unit_of_measurement = UnitOfVolume.CUBIC_METERS,
         device_class = SensorDeviceClass.WATER,
         icon = "mdi:water",
-        state_class = None,
+        state_class = SensorStateClass.TOTAL,
         attribute_data = "M3-Used"
     ),
     EforsyningSensorDescription(
@@ -220,7 +220,7 @@ HEATING_WATER_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
         native_unit_of_measurement = UnitOfVolume.CUBIC_METERS,
         device_class = SensorDeviceClass.WATER,
         icon = "mdi:water",
-        state_class = None,
+        state_class = SensorStateClass.TOTAL,
         attribute_data = "M3-ExpUsed"
     ),
     EforsyningSensorDescription(
@@ -354,7 +354,7 @@ BILLING_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
         native_unit_of_measurement = "kr",
         device_class = SensorDeviceClass.MONETARY,
         icon = "mdi:cash-100",
-        state_class = None,
+        state_class = SensorStateClass.TOTAL,
         attribute_data = None # This one has a separate data entry with attributes.
     ),
 )
