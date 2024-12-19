@@ -134,7 +134,7 @@ HEATING_ENERGY_SENSOR_TYPES: Final[tuple[EforsyningSensorDescription, ...]] = (
         native_unit_of_measurement = UnitOfEnergy.KILO_WATT_HOUR,
         device_class = SensorDeviceClass.ENERGY,
         icon = "mdi:lightning-bolt-circle",
-        state_class = None,
+        state_class = SensorStateClass.TOTAL,
         attribute_data = "kWh-Used"
     ),
     EforsyningSensorDescription(
