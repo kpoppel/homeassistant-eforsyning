@@ -8,7 +8,11 @@
                     "supplierid": "Supplier ID (11111111-1111-1111-1111-111111111111)",
                     "billing_period_skew": "Billing July to June?",
                     "is_water_supply": "Check for Water supply or unchecked for heating",
-                    "entityname": "Optional - set entity name prefix (if you have more meters)"
+                    "entityname": "Optional - set entity name prefix (if you have more meters)",
+                    "meterid": "Optional - Meter ID"
+                },
+                "data_description": {
+                    "meterid": "Enter your specific meter ID if you have multiple."
                 },
                 "title": "Enter username, password and supplier id"
             }

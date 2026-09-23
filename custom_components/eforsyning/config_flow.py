@@ -25,6 +25,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required("username") : str,
         vol.Required("password") : str,
         vol.Required("supplierid") : str,
+        vol.Optional("meterid", default='') : str,
         vol.Optional("entityname", default='EForsyning') : str,
         vol.Required("billing_period_skew", default=False) : bool,
         vol.Required("is_water_supply", default=False) : bool,
@@ -40,7 +41,7 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     # Returns True or False.  The API is not built for async operation
     # therefore it is wrapped in an async executor function.
     try:
-        api = Eforsyning(data["username"], data["password"], data["supplierid"], data["billing_period_skew"], data["is_water_supply"])
+        api = Eforsyning(data["username"], data["password"], data["supplierid"], data["billing_period_skew"], data["is_water_supply"], data["meterid"])
         await hass.async_add_executor_job(api.authenticate)
     except LoginFailed:
         raise InvalidAuth

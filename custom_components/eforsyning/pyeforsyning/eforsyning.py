@@ -24,10 +24,11 @@ class Eforsyning:
     '''
     Primary exported interface for eforsyning.dk API wrapper.
     '''
-    def __init__(self, username, password, supplierid, billing_period_skew, is_water_supply):
+    def __init__(self, username, password, supplierid, billing_period_skew, is_water_supply, meterid):
         self._username = username
         self._password = password
         self._supplierid = supplierid
+        self._meterid = meterid or None
         self._billing_period_skew = billing_period_skew
         self._is_water_supply = is_water_supply
         self._base_url = 'https://eforsyning.dk/'
@@ -44,6 +45,8 @@ class Eforsyning:
         self._latest_year = 2000
         self._latest_year_begin = ""
         self._latest_year_end = ""
+
+        _LOGGER.debug(f"Meter ID: {self._meterid}")
 
     def _get_ebrugerinfo(self):
         '''
@@ -121,12 +124,22 @@ class Eforsyning:
         #   "Målertype":"<str>"
         #  }
         # ]}
+
         result_json = result.json()
-        installations = result_json['Installationer'][0]
+        index = 0
+
+        # If a meter id is specified, look through tha installations and select the matching one
+        if self._meterid is not None:
+            for i, installation in enumerate(result_json.get("Installationer", [])):
+                if str(installation.get("MålerNr")) == str(self._meterid):
+                    index = i
+                    break
+            _LOGGER.debug(f"Selected installation index: {index}")
+                
+        installations = result_json['Installationer'][index]
         self._installation_id = str(installations['InstallationNr'])
         self._asset_id = str(installations['AktivNr'])
-
-        _LOGGER.debug(f"Done getting installatons[0] {installations}")
+        _LOGGER.info(f"Using installaton: {installations}")
 
         return installations
 
@@ -454,7 +467,6 @@ class Eforsyning:
             if 'response' in day_data or day_data['ForbrugsLinjer']['AntLinjer'] == "0":
                 _LOGGER.debug("Fetching new year data did not result in valid data.  Getting current dataset from %s", self._latest_year)
                 day_data = None
-
         
         if day_data == None:
             # Fetch the daily use data using the API based yearly marker
