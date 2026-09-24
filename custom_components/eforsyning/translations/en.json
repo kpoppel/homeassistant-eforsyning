@@ -11,6 +11,12 @@
                     "entityname": "Optional - set entity name prefix (if you have more meters)"
                 },
                 "title": "Enter username, password and supplier id"
+            },
+            "installation": {
+                "data": {
+                    "installation_id": "Installation"
+                },
+                "title": "Select installation"
             }
         },
         "title": "Eforsyning"

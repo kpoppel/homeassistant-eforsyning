@@ -77,3 +77,38 @@ def test_authenticate_returns_false_for_empty_token() -> None:
         # No live service is contacted: every requests.get call receives one
         # of the Mock responses above.
         assert api.authenticate() is False
+
+
+def test_installations_selects_configured_installation() -> None:
+    # This test starts after authentication because _get_installations() only
+    # needs the authenticated session values shown below. Keeping the setup
+    # local avoids repeating the three-request authentication test here.
+    api = make_api()
+    api._user_id = "user-id"
+    api._api_server = "https://supplier.example/"
+    api._access_token = "access-token"
+    api._x_session_id = "session"
+    # InstallationNr is the stable value stored by the config flow. It must
+    # select the matching API record rather than relying on list position.
+    api._configured_installation_id = "22"
+
+    # The API returns two installations. The second record is deliberately
+    # selected so the test would fail if the implementation always used [0].
+    installations = [
+        {"InstallationNr": 11, "AktivNr": 111, "MålerNr": "meter-1"},
+        {"InstallationNr": 22, "AktivNr": 222, "MålerNr": "meter-2"},
+    ]
+    with patch(
+        # Mock only the installation request. The response shape mirrors the
+        # production FindInstallationer response and prevents network access.
+        "custom_components.eforsyning.pyeforsyning.eforsyning.requests.post",
+        return_value=response(200, {"Installationer": installations}),
+    ):
+        result = api._get_installations()
+
+    # Returning the complete list lets the config flow build its named select
+    # options, while the client stores the selected installation and asset IDs
+    # for subsequent consumption and billing requests.
+    assert result == installations
+    assert api._installation_id == "22"
+    assert api._asset_id == "222"

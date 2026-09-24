@@ -11,6 +11,12 @@
                     "entityname": "Valgfri - sæt entity navn præfiks (hvis du har flere målere)"
                 },
                 "title": "Angiv brugernavn, kodeord og leverandør ID"
+            },
+            "installation": {
+                "data": {
+                    "installation_id": "Installation"
+                },
+                "title": "Vælg installation"
             }
         },
         "title": "Eforsyning"

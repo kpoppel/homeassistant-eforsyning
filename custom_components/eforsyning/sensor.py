@@ -1,12 +1,14 @@
 """Platform for Eforsyning sensor integration."""
+
 from __future__ import annotations
 from typing import Any, cast
-#from datetime import datetime
+# from datetime import datetime
 
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-#from homeassistant.const import CONF_NAME
+
+# from homeassistant.const import CONF_NAME
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.typing import StateType
 from homeassistant.helpers.update_coordinator import (
@@ -14,30 +16,46 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
 )
 
-import logging
-_LOGGER = logging.getLogger(__name__)
-
-from .const import DOMAIN, WATER_SENSOR_TYPES, HEATING_TEMP_SENSOR_TYPES, HEATING_ENERGY_SENSOR_TYPES, HEATING_WATER_SENSOR_TYPES, BILLING_SENSOR_TYPES
+from .const import (
+    DOMAIN,
+    WATER_SENSOR_TYPES,
+    HEATING_TEMP_SENSOR_TYPES,
+    HEATING_ENERGY_SENSOR_TYPES,
+    HEATING_WATER_SENSOR_TYPES,
+    BILLING_SENSOR_TYPES,
+)
 from .model import EforsyningSensorDescription
 
 import uuid
 
+import logging
+
+_LOGGER = logging.getLogger(__name__)
+
+
 async def async_setup_entry(
-    hass:HomeAssistant,
-    config:ConfigEntry,
-    async_add_entities:AddEntitiesCallback) -> None:
+    hass: HomeAssistant, config: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
     """Set up the sensor platform."""
     # Use the name for the unique id of each sensor. eforsyning_<supplierid>?
-    #name: str = config.data[CONF_NAME]
-    name: str = config.data['entityname']
-    coordinator: DataUpdateCoordinator = hass.data[DOMAIN][config.entry_id]["coordinator"]
+    # name: str = config.data[CONF_NAME]
+    name: str = config.data["entityname"]
+    coordinator: DataUpdateCoordinator = hass.data[DOMAIN][config.entry_id][
+        "coordinator"
+    ]
+    installation = config.data.get("installation_id")
+    entity_identity = config.data.get("entity_identity") or (
+        config.entry_id
+        if installation
+        else f"{config.data['username']}-{config.data['supplierid']}"
+    )
     # coordinator has a 'data' field.  This is set to the returned API data value.
     # _async_update_data updates the field.
     # From this field the sensors will get their values afterwards.
 
     # What data is available here:
-    #_LOGGER.fatal(f"Config: {config.as_dict()}")
-    
+    # _LOGGER.fatal(f"Config: {config.as_dict()}")
+
     ## Sensors so far for regional heating data:
     # Year, Month, Day? We'll fetch data once per day.
     # NOTE: Measurement type?
@@ -98,18 +116,28 @@ async def async_setup_entry(
 
     # The sensors are defined in the const.py file
     sensors: list[EforsyningSensor] = []
-    if(config.data['is_water_supply']):
+    if config.data["is_water_supply"]:
         for description in WATER_SENSOR_TYPES:
-            sensors.append(EforsyningSensor(name, coordinator, description, config))
+            sensors.append(
+                EforsyningSensor(name, coordinator, description, entity_identity)
+            )
     else:
         for description in HEATING_TEMP_SENSOR_TYPES:
-            sensors.append(EforsyningSensor(name, coordinator, description, config))
+            sensors.append(
+                EforsyningSensor(name, coordinator, description, entity_identity)
+            )
         for description in HEATING_ENERGY_SENSOR_TYPES:
-            sensors.append(EforsyningSensor(name, coordinator, description, config))
+            sensors.append(
+                EforsyningSensor(name, coordinator, description, entity_identity)
+            )
         for description in HEATING_WATER_SENSOR_TYPES:
-            sensors.append(EforsyningSensor(name, coordinator, description, config))
+            sensors.append(
+                EforsyningSensor(name, coordinator, description, entity_identity)
+            )
         for description in BILLING_SENSOR_TYPES:
-            sensors.append(EforsyningSensor(name, coordinator, description, config))
+            sensors.append(
+                EforsyningSensor(name, coordinator, description, entity_identity)
+            )
 
     async_add_entities(sensors)
 
@@ -124,9 +152,10 @@ class EforsyningSensor(CoordinatorEntity, SensorEntity):
       async_added_to_hass
       available
     """
+
     entity_description: EforsyningSensorDescription
 
-    def __init__(self, name, coordinator, description, config):
+    def __init__(self, name, coordinator, description, entity_identity):
         """Initialise the coordinator"""
         super().__init__(coordinator)
 
@@ -138,7 +167,12 @@ class EforsyningSensor(CoordinatorEntity, SensorEntity):
 
         self._attr_name = f"{name} {description.name}"
         # Select a uuid based in username and supplierid as more instances can be loaded
-        my_uuid = str(uuid.uuid3(uuid.NAMESPACE_URL, f"{config.data['username']}-{config.data['supplierid']}"))
+        my_uuid = str(
+            uuid.uuid3(
+                uuid.NAMESPACE_URL,
+                entity_identity,
+            )
+        )
         self._attr_unique_id = f"eforsyning-{my_uuid}-{description.key}"
 
         # Note: Data is stored in self.coordinator.data
@@ -146,7 +180,7 @@ class EforsyningSensor(CoordinatorEntity, SensorEntity):
     @property
     def extra_state_attributes(self):
         """Return extra state attributes.
-           Filter attributes so they are relevant for the individual sensor.
+        Filter attributes so they are relevant for the individual sensor.
         """
         self._attrs = {}
         if self.coordinator.data:
@@ -157,10 +191,12 @@ class EforsyningSensor(CoordinatorEntity, SensorEntity):
             elif self.entity_description.attribute_data:
                 self._attrs["data"] = []
                 for data_point in self.coordinator.data["data"]:
-                    self._attrs["data"].append({
-                        "date" : data_point["DateTo"],
-                        "value" : data_point[self.entity_description.attribute_data],
-                    })
+                    self._attrs["data"].append(
+                        {
+                            "date": data_point["DateTo"],
+                            "value": data_point[self.entity_description.attribute_data],
+                        }
+                    )
 
         return self._attrs
 

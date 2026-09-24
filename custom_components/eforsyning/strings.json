@@ -6,6 +6,12 @@
         "data": {
           "host": "Host"
         }
+      },
+      "installation": {
+        "title": "Select installation",
+        "data": {
+          "installation_id": "Installation"
+        }
       }
     },
     "error": {

@@ -10,8 +10,8 @@ from homeassistant.config_entries import ConfigFlowResult
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.const import CONF_NAME
-from .const import DEFAULT_NAME, DOMAIN
+from homeassistant.helpers import selector
+from .const import DOMAIN, DEFAULT_NAME
 
 from custom_components.eforsyning.pyeforsyning.eforsyning import (
     Eforsyning,
@@ -54,7 +54,9 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
             data["billing_period_skew"],
             data["is_water_supply"],
         )
-        await hass.async_add_executor_job(api.authenticate)
+        if not await hass.async_add_executor_job(api.authenticate):
+            raise InvalidAuth
+        installations = await hass.async_add_executor_job(api.get_installations)
     except LoginFailed:
         raise InvalidAuth
     except HTTPFailed:
@@ -62,7 +64,10 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
 
     # Return info to store in the config entry.
     # title becomes the title on the integrations screen in the UI
-    return {"title": f"Eforsyning {data['supplierid']}"}
+    return {
+        "title": f"Eforsyning {data['supplierid']}",
+        "installations": installations,
+    }
 
 
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -71,6 +76,58 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     VERSION = 3
 
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
+
+    def _installation_schema(self, default: str | None = None) -> vol.Schema:
+        """Build a selector from the installations returned by the API."""
+        options: list[selector.SelectOptionDict] = [
+            selector.SelectOptionDict(
+                value=str(installation["InstallationNr"]),
+                label=(
+                    f"{installation.get('Adresse', 'Unknown address')} - "
+                    f"Meter {installation.get('MålerNr', 'unknown')} "
+                    f"(installation {installation['InstallationNr']})"
+                ),
+            )
+            for installation in self._installations
+        ]
+        return vol.Schema(
+            {
+                vol.Required(
+                    "installation_id",
+                    default=default or options[0]["value"],
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(options=options)
+                )
+            }
+        )
+
+    async def async_step_installation(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Let the user select which installation this entry represents."""
+        if user_input is None:
+            return self.async_show_form(
+                step_id="installation",
+                data_schema=self._installation_schema(
+                    self._pending_data.get("installation_id")
+                ),
+            )
+
+        data = {**self._pending_data, **user_input}
+        if self._pending_entry is None:
+            return self.async_create_entry(
+                title=self._pending_info["title"],
+                data=data,
+            )
+
+        self.hass.config_entries.async_update_entry(
+            self._pending_entry,
+            title=self._pending_info["title"],
+        )
+        return self.async_update_reload_and_abort(
+            self._pending_entry,
+            data_updates=data,
+        )
 
     async def async_step_user(
         self, user_input: dict[str, Any] | None = None
@@ -95,7 +152,11 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
         else:
-            return self.async_create_entry(title=info["title"], data=user_input)
+            self._installations = info["installations"]
+            self._pending_data = user_input
+            self._pending_info = info
+            self._pending_entry = None
+            return await self.async_step_installation()
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
@@ -154,15 +215,21 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.exception("Unexpected exception")
             errors["base"] = "unknown"
         else:
-            self.hass.config_entries.async_update_entry(
-                entry,
-                title=info["title"],
+            self._installations = info["installations"]
+            selected_installation_id = entry.data.get("installation_id")
+            existing_identity = entry.data.get("entity_identity") or (
+                entry.entry_id
+                if "installation_id" in entry.data
+                else f"{entry.data.get('username')}-{entry.data.get('supplierid')}"
             )
-
-            return self.async_update_reload_and_abort(
-                entry,
-                data_updates=user_input,
-            )
+            self._pending_data = {
+                **user_input,
+                "installation_id": selected_installation_id,
+                "entity_identity": existing_identity,
+            }
+            self._pending_info = info
+            self._pending_entry = entry
+            return await self.async_step_installation()
 
         return self.async_show_form(
             step_id="reconfigure",
