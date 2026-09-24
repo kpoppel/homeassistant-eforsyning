@@ -1,0 +1,5 @@
+-r requirements_lint.txt
+colorlog==6.10.1
+homeassistant==2026.9.3
+pytest-homeassistant-custom-component
+pytest-asyncio
