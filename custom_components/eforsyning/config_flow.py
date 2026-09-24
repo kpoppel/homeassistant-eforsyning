@@ -1,36 +1,43 @@
 """Config flow for Eforsyning integration."""
+
 from __future__ import annotations
 
 from typing import Any
 
 import voluptuous as vol
 
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.const import CONF_NAME
-
 from .const import DEFAULT_NAME, DOMAIN
 
+from custom_components.eforsyning.pyeforsyning.eforsyning import (
+    Eforsyning,
+    LoginFailed,
+    HTTPFailed,
+)
+
 import logging
+
 _LOGGER = logging.getLogger(__name__)
 
-from custom_components.eforsyning.pyeforsyning.eforsyning import Eforsyning, LoginFailed, HTTPFailed
 
 # Username/password are the ones for the website
 # supplierID is found by following the README.md instruction
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
-        vol.Required("username") : str,
-        vol.Required("password") : str,
-        vol.Required("supplierid") : str,
-        vol.Optional("entityname", default='EForsyning') : str,
-        vol.Required("billing_period_skew", default=False) : bool,
-        vol.Required("is_water_supply", default=False) : bool,
-        #vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
+        vol.Required("username"): str,
+        vol.Required("password"): str,
+        vol.Required("supplierid"): str,
+        vol.Optional("entityname", default="EForsyning"): str,
+        vol.Required("billing_period_skew", default=False): bool,
+        vol.Required("is_water_supply", default=False): bool,
+        # vol.Optional(CONF_NAME, default=DEFAULT_NAME): str,
     }
 )
+
 
 async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str, Any]:
     """Validate the user input allows us to connect.
@@ -40,7 +47,13 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     # Returns True or False.  The API is not built for async operation
     # therefore it is wrapped in an async executor function.
     try:
-        api = Eforsyning(data["username"], data["password"], data["supplierid"], data["billing_period_skew"], data["is_water_supply"])
+        api = Eforsyning(
+            data["username"],
+            data["password"],
+            data["supplierid"],
+            data["billing_period_skew"],
+            data["is_water_supply"],
+        )
         await hass.async_add_executor_job(api.authenticate)
     except LoginFailed:
         raise InvalidAuth
@@ -51,14 +64,17 @@ async def validate_input(hass: HomeAssistant, data: dict[str, Any]) -> dict[str,
     # title becomes the title on the integrations screen in the UI
     return {"title": f"Eforsyning {data['supplierid']}"}
 
+
 class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     """Handle a config flow for Eforsyning."""
 
     VERSION = 3
-    
+
     CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
 
-    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_user(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle the initial step."""
         if user_input is None:
             return self.async_show_form(
@@ -83,6 +99,75 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self.async_show_form(
             step_id="user", data_schema=STEP_USER_DATA_SCHEMA, errors=errors
+        )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Handle reconfiguration of an existing entry."""
+        entry = self._get_reconfigure_entry()
+
+        data_schema = vol.Schema(
+            {
+                vol.Required(
+                    "username",
+                    default=entry.data.get("username", ""),
+                ): str,
+                vol.Required(
+                    "password",
+                    default=entry.data.get("password", ""),
+                ): str,
+                vol.Required(
+                    "supplierid",
+                    default=entry.data.get("supplierid", ""),
+                ): str,
+                vol.Optional(
+                    "entityname",
+                    default=entry.data.get("entityname", "EForsyning"),
+                ): str,
+                vol.Required(
+                    "billing_period_skew",
+                    default=entry.data.get("billing_period_skew", False),
+                ): bool,
+                vol.Required(
+                    "is_water_supply",
+                    default=entry.data.get("is_water_supply", False),
+                ): bool,
+            }
+        )
+
+        if user_input is None:
+            return self.async_show_form(
+                step_id="reconfigure",
+                data_schema=data_schema,
+            )
+
+        errors: dict[str, str] = {}
+
+        try:
+            info = await validate_input(self.hass, user_input)
+        except CannotConnect:
+            errors["base"] = "cannot_connect"
+        except InvalidAuth:
+            errors["base"] = "invalid_auth"
+        except Exception:
+            _LOGGER.exception("Unexpected exception")
+            errors["base"] = "unknown"
+        else:
+            self.hass.config_entries.async_update_entry(
+                entry,
+                title=info["title"],
+            )
+
+            return self.async_update_reload_and_abort(
+                entry,
+                data_updates=user_input,
+            )
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=data_schema,
+            errors=errors,
         )
 
 
