@@ -84,6 +84,8 @@ This part is a little tricky, but hang on:
   8. In the Network traffic you should see a single line like this:
      `https://<SUPPLIER URL>/umbraco/dff/dffapi/GetVaerkSettings?forsyningid=<SUPPLIER ID (lots of digits and letters)>`
   9. Copy these numbers and letters into Home Assistant along with your user name and password, and you should be ready to go.
+  10. The configuration features selection of the installation to use which is practical if you have
+     more than one on your account. Create more entries if you want to pull more installations.
 
 ## State and attributes
 ---
