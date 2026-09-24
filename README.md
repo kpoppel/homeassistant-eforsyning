@@ -19,6 +19,46 @@ The `eforsyning`component is a Home Assistant custom component for monitoring yo
   3. Configure the `eforsyning` sensor.
   4. Restart Home Assistant.
 
+## Development and testing
+---
+Open this repository in its devcontainer. The setup script installs Home Assistant,
+the test dependencies, and the `pytest-homeassistant-custom-component` fixtures.
+
+To run Home Assistant for manual testing, use the VS Code task **Start Home
+Assistant** or run:
+
+```bash
+scripts/develop
+```
+
+Open [http://localhost:8123](http://localhost:8123) in a browser. The repository's
+`config` directory is used as Home Assistant's configuration directory, and the
+development script adds this repository's `custom_components` directory to
+`PYTHONPATH`, so the local integration is loaded instead of a HACS copy.
+
+The integration can be configured from **Settings -> Devices & services -> Add
+Integration**. Use test credentials only. A successful manual setup makes real
+requests to `eforsyning.dk` and its supplier API.
+
+Run the automated tests with:
+
+```bash
+python -m pytest -q
+```
+
+The tests are split into two layers:
+
+* `tests/test_api.py` tests the pure API client's HTTP contract. Every response is
+  mocked, so these tests never contact the internet.
+* `tests/test_config_flow.py` tests the Home Assistant config-flow layer. The API
+  client's `authenticate` method is mocked, so this test also never contacts the
+  internet.
+
+When changing the API response parsing, add or update tests in `test_api.py` with
+representative JSON responses. When changing config flow, coordinator, or sensor
+behavior, add an integration-layer test using the `hass` fixture and mock the API
+at the boundary.
+
 
 ## Configuration
 ---
@@ -151,12 +191,12 @@ You will see these attributes as pairs of (date, value).
 
 ## Debugging
 ---
-It is possible to debug log the raw response from eforsyning.dk API. This is done by setting up logging like below in configuration.yaml in Home Assistant. It is also possible to set the log level through a service call in UI.  
+It is possible to debug log the raw response from eforsyning.dk API. This is done by setting up logging like below in configuration.yaml in Home Assistant. It is also possible to set the log level through a service call in UI.
 
 ```
-logger: 
+logger:
   default: info
-  logs: 
+  logs:
     custom_components.eforsyning: debug
 ```
 
@@ -164,7 +204,7 @@ logger:
 ---
 
 ### Daily and expected energy use some days back
-Below is an example of how to display energy used vs expected in a graph. 
+Below is an example of how to display energy used vs expected in a graph.
 
 ![alt text](images/example1.png "Energy used and expected example")
 
