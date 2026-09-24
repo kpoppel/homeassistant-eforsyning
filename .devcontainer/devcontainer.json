@@ -2,9 +2,6 @@
     "name": "kpoppel/homeassistant-eforsyning",
     "image": "mcr.microsoft.com/devcontainers/base:debian",
     "postCreateCommand": "scripts/setup",
-    "appPort": [
-        "8123:8123"
-    ],
     "forwardPorts": [
         8123
     ],

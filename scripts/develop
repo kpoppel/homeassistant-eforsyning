@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e
+set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
@@ -14,7 +14,9 @@ fi
 ## This let's us have the structure we want <root>/custom_components/integration_blueprint
 ## while at the same time have Home Assistant configuration inside <root>/config
 ## without resulting to symlinks.
-export PYTHONPATH="${PYTHONPATH}:${PWD}/custom_components"
+export PYTHONPATH="${PWD}/custom_components${PYTHONPATH:+:${PYTHONPATH}}"
 
 # Start Home Assistant
+#python3 -m homeassistant --config "${PWD}/config" --debug
+#or
 hass --config "${PWD}/config" --debug
