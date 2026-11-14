@@ -75,8 +75,6 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 3
 
-    CONNECTION_CLASS = config_entries.CONN_CLASS_CLOUD_POLL
-
     def _installation_schema(self, default: str | None = None) -> vol.Schema:
         """Build a selector from the installations returned by the API."""
         options: list[selector.SelectOptionDict] = [
