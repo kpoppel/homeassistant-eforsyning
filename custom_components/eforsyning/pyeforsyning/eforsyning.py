@@ -1152,8 +1152,12 @@ class Eforsyning:
                             record["antalEnheder"], scale=multiplier_gj
                         )
                         continue
+                    elif record["enhed"] == "kWh":
+                        # Prognosis heating already in kWh (e.g. Sorø Fjernvarme)
+                        energy_prognosis = self._stof(record["antalEnheder"])
+                        continue
                     else:
-                        # Not a prognosis in MWh or GJ - not used
+                        # Not a prognosis in MWh, GJ or kWh - not used
                         continue
                 elif record["enhed"] == "MWh":
                     # Price of comsumption of energy.
@@ -1179,6 +1183,15 @@ class Eforsyning:
                         multiplier_gj * energy_total_used_price / energy_total_used, 2
                     )
                     continue
+                elif record["enhed"] == "kWh":
+                    # Consumption already in kWh (e.g. Sorø Fjernvarme).
+                    # Price is reported per MWh like the MWh branch.
+                    energy_total_used_price += self._stof(record["ialt"])
+                    energy_total_used += self._stof(record["antalEnheder"])
+                    energy_price = round(
+                        multiplier * energy_total_used_price / energy_total_used, 2
+                    )
+                    continue
                 elif record["enhed"] == "M3":
                     # Consumption in M3 (water passed through the system)
                     m3_total_used += self._stof(record["antalEnheder"])
@@ -1197,7 +1210,7 @@ class Eforsyning:
                     continue
                 elif any(
                     test_str in record["tekst"]
-                    for test_str in ["Total (incl.moms)", "Total, inkl. moms"]
+                    for test_str in ["Total (incl.moms)", "Total, inkl. moms", "Total med moms"]
                 ):
                     # Price totalled incl. VAT
                     amount_total = self._stof(record["ialt"])
@@ -1219,6 +1232,7 @@ class Eforsyning:
                         "Til indbetaling",
                         "For lidt opkr\u00e6vet",
                         "Forel\u00f8big beregnet efterbetaling",
+                        "\u00c5rets forventede bel\u00f8b til opkr\u00e6vning",
                     ]
                 ):
                     # Remaining expected payment (indicated by a positive number)
