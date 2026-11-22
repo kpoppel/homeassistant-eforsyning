@@ -112,3 +112,60 @@ def test_installations_selects_configured_installation() -> None:
     assert result == installations
     assert api._installation_id == "22"
     assert api._asset_id == "222"
+
+
+def billing_line(line_type: str, text: str, unit: str, units: str, total: str) -> dict:
+    # Only the fields read by _parse_result_billing are included.
+    return {
+        "linieType": line_type,
+        "tekst": text,
+        "enhed": unit,
+        "antalEnheder": units,
+        "ialt": total,
+    }
+
+
+def test_parse_billing_supports_kwh_units() -> None:
+    api = make_api()
+
+    # Some suppliers (e.g. Sorø Fjernvarme) report consumption and prognosis
+    # in kWh and use different texts for the totals. Values are illustrative.
+    billing = {
+        "faktlini": [
+            billing_line("3", "12345678", "kWh", "20.000,00", "16.000,00"),
+            billing_line("3", "Prognose: 22-11-2026 til 31-12-2026", "kWh", "4.000,00", "3.200,00"),
+            billing_line("12", "Samlet varmeforbrug", "", "", "19.200,00"),
+            billing_line("10", "Moms 25 %", "%", "", "6.000,00"),
+            billing_line("12", "Total med moms", "", "", "30.000,00"),
+            billing_line("18", "Tidligere opkrævet a conto med moms", "", "", "-28.000,00"),
+            billing_line("12", "Årets forventede beløb til opkrævning", "", "", "2.000,00"),
+        ]
+    }
+
+    result = api._parse_result_billing(billing)
+
+    assert result["energy-total-used"] == 20000.0
+    assert result["energy-use-prognosis"] == 24000.0
+    assert result["amount-remaining"] == 2000.0
+    assert result["billing"]["Amount-Total"] == 30000.0
+    assert result["billing"]["MWh-Price"] == 800.0
+
+
+def test_parse_billing_mwh_units_unchanged() -> None:
+    api = make_api()
+
+    billing = {
+        "faktlini": [
+            billing_line("3", "MWh", "MWh", "3,361", "2.000,00"),
+            billing_line("3", "Prognose: 27-08-2022 til 31-12-2022", "MWh", "2,144", "1.000,00"),
+            billing_line("12", "Total (incl.moms)", "", "", "5.000,00"),
+            billing_line("12", "Til indbetaling ", "", "", "123,45"),
+        ]
+    }
+
+    result = api._parse_result_billing(billing)
+
+    assert result["energy-total-used"] == 3361.0
+    assert result["energy-use-prognosis"] == 5505.0
+    assert result["amount-remaining"] == 123.45
+    assert result["billing"]["Amount-Total"] == 5000.0
